@@ -171,3 +171,117 @@ export class TokenResponseDto {
   })
   scope: string;
 }
+
+export class CreateQuoteDto {
+  @ApiProperty({
+    description: 'Dropoff address',
+    example: '123 Main St, San Francisco, CA 94102',
+  })
+  @IsNotEmpty()
+  @IsString()
+  dropoff_address: string;
+
+  @ApiProperty({
+    description: 'Pickup address',
+    example: '456 Market St, San Francisco, CA 94103',
+  })
+  @IsNotEmpty()
+  @IsString()
+  pickup_address: string;
+
+  @ApiProperty({
+    description: 'Pickup latitude coordinate',
+    example: 37.7749,
+  })
+  @IsNotEmpty()
+  @IsNumber()
+  pickup_latitude: number;
+
+  @ApiProperty({
+    description: 'Pickup longitude coordinate',
+    example: -122.4194,
+  })
+  @IsNotEmpty()
+  @IsNumber()
+  pickup_longitude: number;
+
+  @ApiProperty({
+    description: 'Dropoff latitude coordinate',
+    example: 37.7849,
+  })
+  @IsNotEmpty()
+  @IsNumber()
+  dropoff_latitude: number;
+
+  @ApiProperty({
+    description: 'Dropoff longitude coordinate',
+    example: -122.4094,
+  })
+  @IsNotEmpty()
+  @IsNumber()
+  dropoff_longitude: number;
+
+  @ApiPropertyOptional({
+    description: 'Pickup ready datetime (if not provided, will be generated automatically)',
+    example: '2025-01-15T10:30:00Z',
+  })
+  @IsOptional()
+  @IsString()
+  pickup_ready_dt?: string;
+
+  @ApiPropertyOptional({
+    description: 'Pickup deadline datetime (if not provided, will be generated automatically)',
+    example: '2025-01-15T11:00:00Z',
+  })
+  @IsOptional()
+  @IsString()
+  pickup_deadline_dt?: string;
+
+  @ApiPropertyOptional({
+    description: 'Dropoff ready datetime (if not provided, will be generated automatically)',
+    example: '2025-01-15T11:30:00Z',
+  })
+  @IsOptional()
+  @IsString()
+  dropoff_ready_dt?: string;
+
+  @ApiPropertyOptional({
+    description: 'Dropoff deadline datetime (if not provided, will be generated automatically)',
+    example: '2025-01-15T12:00:00Z',
+  })
+  @IsOptional()
+  @IsString()
+  dropoff_deadline_dt?: string;
+
+  @ApiProperty({
+    description: 'Pickup phone number',
+    example: '+14155551234',
+  })
+  @IsNotEmpty()
+  @IsString()
+  pickup_phone_number: string;
+
+  @ApiProperty({
+    description: 'Dropoff phone number',
+    example: '+14155555678',
+  })
+  @IsNotEmpty()
+  @IsString()
+  dropoff_phone_number: string;
+
+  @ApiProperty({
+    description: 'Total value of manifest items in cents',
+    example: 2500,
+  })
+  @IsNotEmpty()
+  @IsNumber()
+  manifest_total_value: number;
+
+  @ApiProperty({
+    description: 'External store identifier',
+    example: 'store_12345',
+  })
+  @IsNotEmpty()
+  @IsString()
+  external_store_id: string;
+}

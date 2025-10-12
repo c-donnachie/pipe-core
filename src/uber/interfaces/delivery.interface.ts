@@ -101,3 +101,33 @@ export interface UberApiResponse {
   cancellation_reason?: string;
   [key: string]: any;
 }
+
+export interface DeliveryQuoteRequest {
+  dropoff_address: string;
+  pickup_address: string;
+  pickup_latitude: number;
+  pickup_longitude: number;
+  dropoff_latitude: number;
+  dropoff_longitude: number;
+  pickup_ready_dt?: string;
+  pickup_deadline_dt?: string;
+  dropoff_ready_dt?: string;
+  dropoff_deadline_dt?: string;
+  pickup_phone_number: string;
+  dropoff_phone_number: string;
+  manifest_total_value: number;
+  external_store_id: string;
+}
+
+export interface DeliveryQuoteResponse {
+  quote_id: string;
+  fee: number;
+  currency: string;
+  currency_type: string;
+  pickup_eta?: string;
+  dropoff_eta?: string;
+  deliverable: boolean;
+  reason?: string;
+  expires_at: string;
+  [key: string]: any;
+}

@@ -6,6 +6,7 @@ import {
   Logger,
   HttpCode,
   HttpStatus,
+  Param,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,7 +18,7 @@ import {
 } from '@nestjs/swagger';
 import { UberService } from './uber.service';
 import { UberAuthService } from './uber-auth.service';
-import { CreateDeliveryDto, GenerateTokenDto, TokenResponseDto } from './dto/uber.dto';
+import { CreateDeliveryDto, GenerateTokenDto, TokenResponseDto, CreateQuoteDto } from './dto/uber.dto';
 import { UBER_CONSTANTS } from './constants';
 
 @ApiTags('uber')
@@ -149,4 +150,108 @@ export class UberController {
 
     return tokenResponse;
   }
+
+  @Post('customers/:customer_id/delivery_quotes')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Create a delivery quote',
+    description:
+      'Create a quote to check deliverability, validity and cost for delivery between two addresses. ' +
+      'This endpoint replicates the Uber Direct API Create Quote functionality. ' +
+      'Authentication is handled automatically via OAuth 2.0 using configured credentials. ' +
+      'Date fields are optional - if not provided, they will be generated automatically following Uber requirements.',
+  })
+  @ApiHeader({
+    name: 'x-uber-token',
+    description:
+      'Custom Uber Direct access token (optional). ' +
+      'If not provided, the API will automatically obtain a token via OAuth.',
+    required: false,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Quote created successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        quote_id: { type: 'string', example: 'quote_abc123xyz' },
+        fee: { type: 'number', example: 850 },
+        currency: { type: 'string', example: 'USD' },
+        currency_type: { type: 'string', example: 'USD' },
+        pickup_eta: { type: 'string', example: '2024-01-15T10:30:00Z' },
+        dropoff_eta: { type: 'string', example: '2024-01-15T11:00:00Z' },
+        deliverable: { type: 'boolean', example: true },
+        reason: { type: 'string', example: 'Delivery available' },
+        expires_at: { type: 'string', example: '2024-01-15T12:00:00Z' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Invalid input data or missing Customer ID',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or expired OAuth credentials',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async createQuote(
+    @Param('customer_id') customerId: string,
+    @Body() createQuoteDto: CreateQuoteDto,
+    @Headers('x-uber-token') customToken?: string,
+  ) {
+    this.logger.log(`Received create-quote request for customer: ${customerId}`);
+    this.logger.debug(
+      `Custom token: ${customToken ? 'Yes' : 'No (using OAuth)'}`,
+    );
+
+    return await this.uberService.createQuote(
+      customerId,
+      createQuoteDto,
+      customToken,
+    );
+  }
+
+  @Post('debug/config')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Debug configuration and token',
+    description: 'Debug endpoint to verify configuration and token status',
+  })
+  async debugConfig(@Headers('x-uber-token') customToken?: string) {
+    this.logger.log('Debug configuration request received');
+    
+    const config = {
+      hasCustomToken: !!customToken,
+      tokenLength: customToken ? customToken.length : 0,
+      tokenPreview: customToken ? `${customToken.substring(0, 20)}...${customToken.substring(customToken.length - 10)}` : 'No token',
+      envConfig: {
+        hasClientId: !!process.env.UBER_DIRECT_CLIENT_ID,
+        hasClientSecret: !!process.env.UBER_DIRECT_CLIENT_SECRET,
+        hasCustomerId: !!process.env.UBER_DIRECT_CUSTOMER_ID,
+        authUrl: process.env.UBER_AUTH_URL || 'https://login.uber.com/oauth/v2/token',
+        baseUrl: process.env.UBER_BASE_URL || 'https://api.uber.com/v1',
+      },
+    };
+
+    this.logger.debug(`Debug config: ${JSON.stringify(config, null, 2)}`);
+    
+    return config;
+  }
+
+  @Post('test/connection')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Test Uber API connection',
+    description: 'Test endpoint to verify connection and authentication with Uber API',
+  })
+  async testConnection(@Headers('x-uber-token') customToken?: string) {
+    this.logger.log('Test connection request received');
+    
+    return await this.uberService.testConnection(customToken);
+  }
+
 }
