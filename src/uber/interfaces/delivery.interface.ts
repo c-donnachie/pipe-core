@@ -131,3 +131,20 @@ export interface DeliveryQuoteResponse {
   expires_at: string;
   [key: string]: any;
 }
+
+export interface DeliveryListQuery {
+  limit?: number;
+  offset?: number;
+  status?: string;
+  external_store_id?: string;
+  created_after?: string;
+  created_before?: string;
+}
+
+export interface DeliveryListResponse {
+  deliveries: UberApiResponse[];
+  limit: number;
+  offset: number;
+  total?: number;
+  [key: string]: any;
+}

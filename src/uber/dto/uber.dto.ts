@@ -1,5 +1,5 @@
 import { IsNotEmpty, IsObject, ValidateNested, IsOptional, IsString, IsNumber, IsArray } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class LocationDto {
@@ -284,4 +284,59 @@ export class CreateQuoteDto {
   @IsNotEmpty()
   @IsString()
   external_store_id: string;
+}
+
+export class ListDeliveriesDto {
+  @ApiPropertyOptional({
+    description: 'Maximum number of deliveries to return',
+    example: 50,
+    default: 50,
+  })
+  @IsOptional()
+  @Transform(({ value }) => parseInt(value))
+  @IsNumber()
+  limit?: number = 50;
+
+  @ApiPropertyOptional({
+    description: 'Number of deliveries to skip',
+    example: 0,
+    default: 0,
+  })
+  @IsOptional()
+  @Transform(({ value }) => parseInt(value))
+  @IsNumber()
+  offset?: number = 0;
+
+  @ApiPropertyOptional({
+    description: 'Filter by delivery status',
+    example: 'pending',
+    enum: ['pending', 'assigned', 'picked_up', 'delivered', 'cancelled'],
+  })
+  @IsOptional()
+  @IsString()
+  status?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by external store ID',
+    example: 'store_12345',
+  })
+  @IsOptional()
+  @IsString()
+  external_store_id?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter deliveries created after this date',
+    example: '2025-01-01T00:00:00Z',
+  })
+  @IsOptional()
+  @IsString()
+  created_after?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter deliveries created before this date',
+    example: '2025-12-31T23:59:59Z',
+  })
+  @IsOptional()
+  @IsString()
+  created_before?: string;
 }

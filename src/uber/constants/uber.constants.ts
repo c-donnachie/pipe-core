@@ -3,6 +3,7 @@ export const UBER_CONSTANTS = {
   AUTH_URL: 'https://login.uber.com/oauth/v2/token',
   BASE_URL: 'https://api.uber.com/v1',
   QUOTES_ENDPOINT: '/customers/:customer_id/delivery_quotes',
+  DELIVERIES_ENDPOINT: '/customers/:customer_id/deliveries',
   
   // OAuth Configuration
   DEFAULT_GRANT_TYPE: 'client_credentials',

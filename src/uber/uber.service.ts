@@ -1,7 +1,7 @@
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import fetch from 'node-fetch';
 import { env } from '../common/env';
-import { DeliveryRequest, UberApiResponse, DeliveryQuoteRequest, DeliveryQuoteResponse } from './interfaces';
+import { DeliveryRequest, UberApiResponse, DeliveryQuoteRequest, DeliveryQuoteResponse, DeliveryListQuery, DeliveryListResponse } from './interfaces';
 import { UberAuthService } from './uber-auth.service';
 import { UBER_CONSTANTS } from './constants';
 import { DeliveryEntity } from './entities';
@@ -217,5 +217,79 @@ export class UberService {
     }
 
     return quoteData;
+  }
+
+  async listDeliveries(
+    customerId: string,
+    queryParams: DeliveryListQuery,
+    customToken?: string,
+  ): Promise<DeliveryListResponse> {
+    // Get token: use custom token if provided, otherwise get OAuth token
+    const token = customToken || (await this.authService.getAccessToken());
+
+    if (!customerId) {
+      this.logger.error('No Customer ID provided');
+      throw new HttpException(
+        'Customer ID is required',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const url = `${env.uber.baseUrl}${UBER_CONSTANTS.DELIVERIES_ENDPOINT.replace(':customer_id', customerId)}`;
+
+    try {
+      // Build query string from parameters
+      const searchParams = new URLSearchParams();
+      if (queryParams.limit) searchParams.append('limit', queryParams.limit.toString());
+      if (queryParams.offset) searchParams.append('offset', queryParams.offset.toString());
+      if (queryParams.status) searchParams.append('status', queryParams.status);
+      if (queryParams.external_store_id) searchParams.append('external_store_id', queryParams.external_store_id);
+      if (queryParams.created_after) searchParams.append('created_after', queryParams.created_after);
+      if (queryParams.created_before) searchParams.append('created_before', queryParams.created_before);
+
+      const fullUrl = searchParams.toString() ? `${url}?${searchParams.toString()}` : url;
+
+      this.logger.log(`Listing deliveries from Uber API: ${fullUrl}`);
+      this.logger.debug(`Query params: ${JSON.stringify(queryParams)}`);
+      this.logger.debug(`Using token: ${token.substring(0, 20)}...${token.substring(token.length - 10)}`);
+
+      const headers = {
+        'Accept': UBER_CONSTANTS.CONTENT_TYPES.JSON,
+        'User-Agent': 'Postman/UberEatsMarketplaceCollections',
+        Authorization: `Bearer ${token}`,
+      };
+
+      this.logger.debug(`Request headers: ${JSON.stringify(headers)}`);
+
+      const response = await fetch(fullUrl, {
+        method: 'GET',
+        headers,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        this.logger.error(
+          `Uber API error: ${response.status} - ${JSON.stringify(data)}`,
+        );
+        throw new HttpException(
+          data || 'Error listing deliveries',
+          response.status,
+        );
+      }
+
+      this.logger.log(`Deliveries listed successfully: ${data.deliveries?.length || 0} deliveries found`);
+      return data as DeliveryListResponse;
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      this.logger.error(`Unexpected error: ${error.message}`);
+      throw new HttpException(
+        'Internal server error',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }

@@ -1,12 +1,14 @@
 import {
   Controller,
   Post,
+  Get,
   Body,
   Headers,
   Logger,
   HttpCode,
   HttpStatus,
   Param,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -18,7 +20,7 @@ import {
 } from '@nestjs/swagger';
 import { UberService } from './uber.service';
 import { UberAuthService } from './uber-auth.service';
-import { CreateDeliveryDto, GenerateTokenDto, TokenResponseDto, CreateQuoteDto } from './dto/uber.dto';
+import { CreateDeliveryDto, GenerateTokenDto, TokenResponseDto, CreateQuoteDto, ListDeliveriesDto } from './dto/uber.dto';
 import { UBER_CONSTANTS } from './constants';
 
 @ApiTags('uber')
@@ -211,6 +213,95 @@ export class UberController {
     return await this.uberService.createQuote(
       customerId,
       createQuoteDto,
+      customToken,
+    );
+  }
+
+  @Get('customers/:customer_id/deliveries')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'List deliveries',
+    description:
+      'Retrieve a list of deliveries for a specific customer. ' +
+      'This endpoint replicates the Uber Direct API List Deliveries functionality. ' +
+      'Supports filtering by status, external store ID, and date ranges.',
+  })
+  @ApiHeader({
+    name: 'x-uber-token',
+    description:
+      'Custom Uber Direct access token (optional). ' +
+      'If not provided, the API will automatically obtain a token via OAuth.',
+    required: false,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Deliveries listed successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        deliveries: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', example: 'del_abc123xyz' },
+              status: { type: 'string', example: 'pending' },
+              complete: { type: 'boolean', example: false },
+              kind: { type: 'string', example: 'on_demand' },
+              pickup: {
+                type: 'object',
+                properties: {
+                  address: { type: 'string', example: '456 Market St, San Francisco, CA 94103' },
+                  latitude: { type: 'number', example: 37.7749 },
+                  longitude: { type: 'number', example: -122.4194 },
+                },
+              },
+              dropoff: {
+                type: 'object',
+                properties: {
+                  address: { type: 'string', example: '123 Main St, San Francisco, CA 94102' },
+                  latitude: { type: 'number', example: 37.7849 },
+                  longitude: { type: 'number', example: -122.4094 },
+                },
+              },
+              created: { type: 'string', example: '2025-01-15T10:30:00Z' },
+              updated: { type: 'string', example: '2025-01-15T10:35:00Z' },
+              tracking_url: { type: 'string', example: 'https://track.uber.com/abc123' },
+            },
+          },
+        },
+        limit: { type: 'number', example: 50 },
+        offset: { type: 'number', example: 0 },
+        total: { type: 'number', example: 150 },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Invalid query parameters or missing Customer ID',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or expired OAuth credentials',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async listDeliveries(
+    @Param('customer_id') customerId: string,
+    @Query() listDeliveriesDto: ListDeliveriesDto,
+    @Headers('x-uber-token') customToken?: string,
+  ) {
+    this.logger.log(`Received list-deliveries request for customer: ${customerId}`);
+    this.logger.debug(
+      `Query params: ${JSON.stringify(listDeliveriesDto)}, ` +
+      `Custom token: ${customToken ? 'Yes' : 'No (using OAuth)'}`,
+    );
+
+    return await this.uberService.listDeliveries(
+      customerId,
+      listDeliveriesDto,
       customToken,
     );
   }
