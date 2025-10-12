@@ -102,7 +102,7 @@ export class TokenResponseDto {
 export class CreateQuoteDto {
   @ApiProperty({
     description: 'Dropoff address',
-    example: '123 Main St, San Francisco, CA 94102',
+    example: 'Av. Providencia 1200, Providencia, Santiago, Chile',
   })
   @IsNotEmpty()
   @IsString()
@@ -110,7 +110,7 @@ export class CreateQuoteDto {
 
   @ApiProperty({
     description: 'Pickup address',
-    example: '456 Market St, San Francisco, CA 94103',
+    example: 'Av. Providencia 1234, Providencia, Santiago, Chile',
   })
   @IsNotEmpty()
   @IsString()
@@ -118,7 +118,7 @@ export class CreateQuoteDto {
 
   @ApiProperty({
     description: 'Pickup latitude coordinate',
-    example: 37.7749,
+    example: -33.4189,
   })
   @IsNotEmpty()
   @IsNumber()
@@ -126,7 +126,7 @@ export class CreateQuoteDto {
 
   @ApiProperty({
     description: 'Pickup longitude coordinate',
-    example: -122.4194,
+    example: -70.6069,
   })
   @IsNotEmpty()
   @IsNumber()
@@ -134,7 +134,7 @@ export class CreateQuoteDto {
 
   @ApiProperty({
     description: 'Dropoff latitude coordinate',
-    example: 37.7849,
+    example: -33.4191,
   })
   @IsNotEmpty()
   @IsNumber()
@@ -142,7 +142,7 @@ export class CreateQuoteDto {
 
   @ApiProperty({
     description: 'Dropoff longitude coordinate',
-    example: -122.4094,
+    example: -70.6071,
   })
   @IsNotEmpty()
   @IsNumber()
@@ -182,7 +182,7 @@ export class CreateQuoteDto {
 
   @ApiProperty({
     description: 'Pickup phone number',
-    example: '+14155551234',
+    example: '+56912345678',
   })
   @IsNotEmpty()
   @IsString()
@@ -190,7 +190,7 @@ export class CreateQuoteDto {
 
   @ApiProperty({
     description: 'Dropoff phone number',
-    example: '+14155555678',
+    example: '+56987654321',
   })
   @IsNotEmpty()
   @IsString()
@@ -548,7 +548,7 @@ export class TestSpecificationsDto {
 export class CreateDeliveryDto {
   @ApiProperty({
     description: 'Dropoff address',
-    example: '123 Main St, San Francisco, CA 94102',
+    example: 'Av. Providencia 1200, Providencia, Santiago, Chile',
   })
   @IsNotEmpty()
   @IsString()
@@ -556,7 +556,7 @@ export class CreateDeliveryDto {
 
   @ApiProperty({
     description: 'Dropoff contact name',
-    example: 'John Doe',
+    example: 'Carlos González',
   })
   @IsNotEmpty()
   @IsString()
@@ -564,7 +564,7 @@ export class CreateDeliveryDto {
 
   @ApiProperty({
     description: 'Dropoff phone number',
-    example: '+14155551234',
+    example: '+56987654321',
   })
   @IsNotEmpty()
   @IsString()
@@ -582,7 +582,7 @@ export class CreateDeliveryDto {
 
   @ApiProperty({
     description: 'Pickup address',
-    example: '456 Market St, San Francisco, CA 94103',
+    example: 'Av. Providencia 1234, Providencia, Santiago, Chile',
   })
   @IsNotEmpty()
   @IsString()
@@ -590,7 +590,7 @@ export class CreateDeliveryDto {
 
   @ApiProperty({
     description: 'Pickup contact name',
-    example: 'Jane Smith',
+    example: 'María Rodríguez',
   })
   @IsNotEmpty()
   @IsString()
@@ -598,7 +598,7 @@ export class CreateDeliveryDto {
 
   @ApiProperty({
     description: 'Pickup phone number',
-    example: '+14155555678',
+    example: '+56912345678',
   })
   @IsNotEmpty()
   @IsString()
@@ -606,7 +606,7 @@ export class CreateDeliveryDto {
 
   @ApiProperty({
     description: 'Pickup business name',
-    example: 'Mario\'s Pizza',
+    example: 'Pizzería Don Mario',
   })
   @IsOptional()
   @IsString()
@@ -614,7 +614,7 @@ export class CreateDeliveryDto {
 
   @ApiProperty({
     description: 'Pickup latitude',
-    example: 37.7749,
+    example: -33.4189,
   })
   @IsNotEmpty()
   @IsNumber()
@@ -622,7 +622,7 @@ export class CreateDeliveryDto {
 
   @ApiProperty({
     description: 'Pickup longitude',
-    example: -122.4194,
+    example: -70.6069,
   })
   @IsNotEmpty()
   @IsNumber()
@@ -647,7 +647,7 @@ export class CreateDeliveryDto {
 
   @ApiProperty({
     description: 'Dropoff business name',
-    example: 'Tech Office Building',
+    example: 'Edificio Corporativo',
   })
   @IsOptional()
   @IsString()
@@ -655,7 +655,7 @@ export class CreateDeliveryDto {
 
   @ApiProperty({
     description: 'Dropoff latitude',
-    example: 37.7849,
+    example: -33.4417,
   })
   @IsNotEmpty()
   @IsNumber()
@@ -663,7 +663,7 @@ export class CreateDeliveryDto {
 
   @ApiProperty({
     description: 'Dropoff longitude',
-    example: -122.4094,
+    example: -70.6441,
   })
   @IsNotEmpty()
   @IsNumber()
@@ -800,7 +800,7 @@ export class CreateDeliveryDto {
 
   @ApiProperty({
     description: 'External store ID',
-    example: 'store_12345',
+    example: 'store_santiago_123',
   })
   @IsNotEmpty()
   @IsString()
