@@ -1,7 +1,7 @@
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import fetch from 'node-fetch';
 import { env } from '../common/env';
-import { DeliveryRequest, UberApiResponse, DeliveryQuoteRequest, DeliveryQuoteResponse, DeliveryListQuery, DeliveryListResponse } from './interfaces';
+import { DeliveryRequest, UberApiResponse, DeliveryQuoteRequest, DeliveryQuoteResponse, DeliveryListQuery, DeliveryListResponse, CreateDeliveryRequest, CreateDeliveryResponse } from './interfaces';
 import { UberAuthService } from './uber-auth.service';
 import { UBER_CONSTANTS } from './constants';
 import { DeliveryEntity } from './entities';
@@ -13,29 +13,29 @@ export class UberService {
   constructor(private readonly authService: UberAuthService) {}
 
   async createDelivery(
-    deliveryData: DeliveryRequest,
+    customerId: string,
+    deliveryData: CreateDeliveryRequest,
     customToken?: string,
-    customCustomerId?: string,
-  ): Promise<UberApiResponse> {
+  ): Promise<CreateDeliveryResponse> {
     // Get token: use custom token if provided, otherwise get OAuth token
     const token = customToken || (await this.authService.getAccessToken());
 
-    // Get customer ID: use custom if provided, otherwise use from env
-    const customerId = customCustomerId || env.uber.customerId;
-
     if (!customerId) {
-      this.logger.error('No Uber Direct Customer ID provided');
+      this.logger.error('No Customer ID provided');
       throw new HttpException(
-        'Uber Direct Customer ID is required',
+        'Customer ID is required',
         HttpStatus.BAD_REQUEST,
       );
     }
+
+    // Generate dates automatically if not provided
+    const processedDeliveryData = this.generateDatesIfNeeded(deliveryData);
 
     const url = `${env.uber.baseUrl}/customers/${customerId}/deliveries`;
 
     try {
       this.logger.log(`Creating delivery to Uber API: ${url}`);
-      this.logger.debug(`Delivery data: ${JSON.stringify(deliveryData)}`);
+      this.logger.debug(`Delivery data: ${JSON.stringify(processedDeliveryData)}`);
       this.logger.debug(`Using token: ${token.substring(0, 20)}...${token.substring(token.length - 10)}`);
       this.logger.debug(`Token length: ${token.length}`);
 
@@ -51,7 +51,7 @@ export class UberService {
       const response = await fetch(url, {
         method: 'POST',
         headers,
-        body: JSON.stringify(deliveryData),
+        body: JSON.stringify(processedDeliveryData),
       });
 
       const data = await response.json();
@@ -67,7 +67,7 @@ export class UberService {
       }
 
       this.logger.log(`Delivery created successfully: ${data.id || 'N/A'}`);
-      return data as UberApiResponse;
+      return data as CreateDeliveryResponse;
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
@@ -193,12 +193,12 @@ export class UberService {
   /**
    * Generate dates automatically following Uber's requirements if not provided
    */
-  private generateDatesIfNeeded(quoteData: DeliveryQuoteRequest): DeliveryQuoteRequest {
+  private generateDatesIfNeeded(data: DeliveryQuoteRequest | CreateDeliveryRequest): DeliveryQuoteRequest | CreateDeliveryRequest {
     const now = new Date();
     
     // If any date is missing, generate all dates following Uber's requirements
-    if (!quoteData.pickup_ready_dt || !quoteData.pickup_deadline_dt || 
-        !quoteData.dropoff_ready_dt || !quoteData.dropoff_deadline_dt) {
+    if (!data.pickup_ready_dt || !data.pickup_deadline_dt || 
+        !data.dropoff_ready_dt || !data.dropoff_deadline_dt) {
       
       this.logger.debug('Generating dates automatically following Uber requirements');
       
@@ -208,15 +208,15 @@ export class UberService {
       const dropoffDeadline = new Date(now.getTime() + 50 * 60 * 1000); // +50 minutes (20 min after dropoff_ready)
 
       return {
-        ...quoteData,
-        pickup_ready_dt: quoteData.pickup_ready_dt || pickupReady.toISOString(),
-        pickup_deadline_dt: quoteData.pickup_deadline_dt || pickupDeadline.toISOString(),
-        dropoff_ready_dt: quoteData.dropoff_ready_dt || dropoffReady.toISOString(),
-        dropoff_deadline_dt: quoteData.dropoff_deadline_dt || dropoffDeadline.toISOString(),
+        ...data,
+        pickup_ready_dt: data.pickup_ready_dt || pickupReady.toISOString(),
+        pickup_deadline_dt: data.pickup_deadline_dt || pickupDeadline.toISOString(),
+        dropoff_ready_dt: data.dropoff_ready_dt || dropoffReady.toISOString(),
+        dropoff_deadline_dt: data.dropoff_deadline_dt || dropoffDeadline.toISOString(),
       };
     }
 
-    return quoteData;
+    return data;
   }
 
   async listDeliveries(

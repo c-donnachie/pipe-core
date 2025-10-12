@@ -33,27 +33,20 @@ export class UberController {
     private readonly uberAuthService: UberAuthService,
   ) {}
 
-  @Post('create-delivery')
+  @Post('customers/:customer_id/deliveries')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Create a new Uber Direct delivery',
+    summary: 'Create a delivery',
     description:
-      'Creates a new delivery request with Uber Direct. ' +
-      'Authentication is handled automatically via OAuth 2.0 using configured credentials. ' +
-      'Optionally, you can provide a custom access token and customer ID via headers.',
+      'Create a delivery between two addresses with comprehensive verification options. ' +
+      'This endpoint replicates the Uber Direct API Create Delivery functionality. ' +
+      'Supports manifest items, verification requirements, and advanced delivery options.',
   })
   @ApiHeader({
     name: 'x-uber-token',
     description:
       'Custom Uber Direct access token (optional). ' +
       'If not provided, the API will automatically obtain a token via OAuth.',
-    required: false,
-  })
-  @ApiHeader({
-    name: 'x-uber-customer-id',
-    description:
-      'Custom Uber Direct Customer ID (optional). ' +
-      'If not provided, uses UBER_DIRECT_CUSTOMER_ID from environment variables.',
     required: false,
   })
   @ApiResponse({
@@ -64,14 +57,45 @@ export class UberController {
       properties: {
         id: { type: 'string', example: 'del_abc123xyz' },
         status: { type: 'string', example: 'pending' },
-        tracking_url: {
-          type: 'string',
-          example: 'https://track.uber.com/abc123',
-        },
-        pickup_eta: { type: 'string', example: '2024-01-15T10:30:00Z' },
-        dropoff_eta: { type: 'string', example: '2024-01-15T11:00:00Z' },
         complete: { type: 'boolean', example: false },
         kind: { type: 'string', example: 'on_demand' },
+        pickup: {
+          type: 'object',
+          properties: {
+            address: { type: 'string', example: '456 Market St, San Francisco, CA 94103' },
+            latitude: { type: 'number', example: 37.7749 },
+            longitude: { type: 'number', example: -122.4194 },
+            name: { type: 'string', example: 'Jane Smith' },
+            phone_number: { type: 'string', example: '+14155555678' },
+          },
+        },
+        dropoff: {
+          type: 'object',
+          properties: {
+            address: { type: 'string', example: '123 Main St, San Francisco, CA 94102' },
+            latitude: { type: 'number', example: 37.7849 },
+            longitude: { type: 'number', example: -122.4094 },
+            name: { type: 'string', example: 'John Doe' },
+            phone_number: { type: 'string', example: '+14155551234' },
+          },
+        },
+        manifest: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', example: 'Pizza Margherita' },
+              quantity: { type: 'number', example: 2 },
+              size: { type: 'string', example: 'medium' },
+              price: { type: 'number', example: 1500 },
+            },
+          },
+        },
+        created: { type: 'string', example: '2025-01-15T10:30:00Z' },
+        updated: { type: 'string', example: '2025-01-15T10:35:00Z' },
+        pickup_eta: { type: 'string', example: '2025-01-15T10:45:00Z' },
+        dropoff_eta: { type: 'string', example: '2025-01-15T11:15:00Z' },
+        tracking_url: { type: 'string', example: 'https://track.uber.com/abc123' },
         courier: {
           type: 'object',
           properties: {
@@ -96,20 +120,19 @@ export class UberController {
     description: 'Internal server error',
   })
   async createDelivery(
+    @Param('customer_id') customerId: string,
     @Body() createDeliveryDto: CreateDeliveryDto,
     @Headers('x-uber-token') customToken?: string,
-    @Headers('x-uber-customer-id') customCustomerId?: string,
   ) {
-    this.logger.log('Received create-delivery request');
+    this.logger.log(`Received create-delivery request for customer: ${customerId}`);
     this.logger.debug(
-      `Custom token: ${customToken ? 'Yes' : 'No (using OAuth)'}, ` +
-      `Custom customer ID: ${customCustomerId ? 'Yes' : 'No (using default)'}`,
+      `Custom token: ${customToken ? 'Yes' : 'No (using OAuth)'}`,
     );
 
     return await this.uberService.createDelivery(
+      customerId,
       createDeliveryDto,
       customToken,
-      customCustomerId,
     );
   }
 

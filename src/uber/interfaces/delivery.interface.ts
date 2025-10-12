@@ -148,3 +148,104 @@ export interface DeliveryListResponse {
   total?: number;
   [key: string]: any;
 }
+
+export interface CreateDeliveryRequest {
+  dropoff_address: string;
+  dropoff_name: string;
+  dropoff_phone_number: string;
+  manifest_items: ManifestItem[];
+  pickup_address: string;
+  pickup_name: string;
+  pickup_phone_number: string;
+  pickup_business_name?: string;
+  pickup_latitude: number;
+  pickup_longitude: number;
+  pickup_notes?: string;
+  pickup_verification?: {
+    signature?: boolean;
+    signature_requirement?: {
+      enabled: boolean;
+      collect_signer_name?: boolean;
+      collect_signer_relationship?: boolean;
+    };
+    barcodes?: Array<{
+      value: string;
+      type: string;
+    }>;
+    identification?: {
+      min_age: number;
+    };
+    picture?: boolean;
+  };
+  dropoff_business_name?: string;
+  dropoff_latitude: number;
+  dropoff_longitude: number;
+  dropoff_notes?: string;
+  dropoff_seller_notes?: string;
+  dropoff_verification?: {
+    signature?: boolean;
+    signature_requirement?: {
+      enabled: boolean;
+      collect_signer_name?: boolean;
+      collect_signer_relationship?: boolean;
+    };
+    barcodes?: Array<{
+      value: string;
+      type: string;
+    }>;
+    pincode?: {
+      enabled: boolean;
+    };
+    identification?: {
+      min_age: number;
+    };
+    picture?: boolean;
+  };
+  deliverable_action: string;
+  manifest_reference?: string;
+  manifest_total_value: number;
+  quote_id?: string;
+  undeliverable_action: string;
+  pickup_ready_dt?: string;
+  pickup_deadline_dt?: string;
+  dropoff_ready_dt?: string;
+  dropoff_deadline_dt?: string;
+  requires_dropoff_signature: boolean;
+  requires_id: boolean;
+  tip?: number;
+  idempotency_key?: string;
+  external_store_id: string;
+  return_verification?: {
+    signature?: boolean;
+    signature_requirement?: {
+      enabled: boolean;
+      collect_signer_name?: boolean;
+      collect_signer_relationship?: boolean;
+    };
+    barcodes?: Array<{
+      value: string;
+      type: string;
+    }>;
+    picture?: boolean;
+  };
+  external_user_info?: {
+    merchant_account?: {
+      account_created_at: string;
+      email: string;
+    };
+    device?: {
+      id: string;
+    };
+  };
+  external_id?: string;
+  test_specifications?: {
+    robo_courier_specification?: {
+      mode: string;
+    };
+  };
+}
+
+export interface CreateDeliveryResponse extends UberApiResponse {
+  // Inherits all properties from UberApiResponse
+  // Additional properties specific to create delivery response
+}
