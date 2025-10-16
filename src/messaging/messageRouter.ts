@@ -73,10 +73,10 @@ export class MessageRouter {
         isActive: true,
       },
       email: {
-        provider: 'sendgrid' as const,
+        provider: 'resend' as const, // Cambiado a Resend por defecto
         credentials: {
-          apiKey: process.env.SENDGRID_API_KEY || '',
-          fromEmail: process.env.SENDGRID_FROM_EMAIL || 'noreply@pipecore.com',
+          apiKey: env.resend.apiKey,
+          fromEmail: env.resend.fromEmail,
         },
         isActive: true,
       },
@@ -187,7 +187,7 @@ export class MessageRouter {
       },
     });
 
-    // Tenant de ejemplo usando Meta para WhatsApp
+    // Tenant de ejemplo usando Meta para WhatsApp y Resend para Email
     this.tenantConfigs.set('genda_456', {
       tenantId: 'genda_456',
       channels: {
@@ -205,6 +205,30 @@ export class MessageRouter {
           credentials: {
             apiKey: process.env.RESEND_API_KEY || '',
             fromEmail: 'noreply@genda.com',
+          },
+          isActive: true,
+        },
+      },
+    });
+
+    // Tenant de ejemplo usando SendGrid para Email
+    this.tenantConfigs.set('roe_789', {
+      tenantId: 'roe_789',
+      channels: {
+        email: {
+          provider: 'sendgrid',
+          credentials: {
+            apiKey: process.env.SENDGRID_API_KEY || '',
+            fromEmail: 'noreply@roe.com',
+          },
+          isActive: true,
+        },
+        sms: {
+          provider: 'twilio',
+          credentials: {
+            accountSid: env.twilio.accountSid,
+            authToken: env.twilio.authToken,
+            phoneNumber: env.twilio.phoneNumber,
           },
           isActive: true,
         },

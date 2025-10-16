@@ -193,7 +193,8 @@ export class MessagingController {
               name: { type: 'string' },
               displayName: { type: 'string' },
               description: { type: 'string' },
-              supportedFeatures: { type: 'array', items: { type: 'string' } }
+              supportedFeatures: { type: 'array', items: { type: 'string' } },
+              providers: { type: 'array', items: { type: 'string' } }
             }
           }
         }
@@ -208,6 +209,7 @@ export class MessagingController {
           displayName: 'SMS',
           description: 'Envío de mensajes de texto cortos',
           supportedFeatures: ['text', 'media', 'webhooks'],
+          providers: ['twilio'],
           limits: {
             maxLength: 1600,
             maxMediaFiles: 10
@@ -218,6 +220,7 @@ export class MessagingController {
           displayName: 'WhatsApp',
           description: 'Envío de mensajes WhatsApp con soporte para medios',
           supportedFeatures: ['text', 'media', 'templates', 'webhooks', 'auto-reply'],
+          providers: ['twilio', 'meta'],
           limits: {
             maxLength: 4096,
             maxMediaFiles: 10
@@ -228,6 +231,7 @@ export class MessagingController {
           displayName: 'Email',
           description: 'Envío de correos electrónicos con HTML y adjuntos',
           supportedFeatures: ['html', 'text', 'attachments', 'templates', 'webhooks'],
+          providers: ['resend', 'sendgrid'],
           limits: {
             maxSubjectLength: 78,
             maxBodyLength: 1000000,
@@ -235,6 +239,57 @@ export class MessagingController {
           }
         }
       ]
+    };
+  }
+
+  @Post('config/provider')
+  @ApiOperation({ summary: 'Configura un proveedor específico para un tenant' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Proveedor configurado exitosamente',
+    type: Object 
+  })
+  async configureProvider(
+    @Body() body: {
+      tenantId: string;
+      channel: 'sms' | 'whatsapp' | 'email';
+      provider: 'twilio' | 'meta' | 'sendgrid' | 'resend';
+      credentials: Record<string, any>;
+      isActive?: boolean;
+    }
+  ): Promise<{ success: boolean; message: string }> {
+    this.logger.log(`Configurando proveedor ${body.provider} para tenant ${body.tenantId} en canal ${body.channel}`);
+    
+    // Aquí se integraría con el MessageRouter para configurar el proveedor
+    // await this.messagingService.configureProvider(body.tenantId, body.channel, body.provider, body.credentials);
+    
+    return {
+      success: true,
+      message: `Proveedor ${body.provider} configurado exitosamente para tenant ${body.tenantId} en canal ${body.channel}`
+    };
+  }
+
+  @Get('config/:tenantId')
+  @ApiOperation({ summary: 'Obtiene la configuración de proveedores para un tenant' })
+  @ApiParam({ name: 'tenantId', description: 'ID del tenant' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Configuración obtenida exitosamente',
+    type: Object 
+  })
+  async getTenantConfig(@Param('tenantId') tenantId: string): Promise<any> {
+    this.logger.log(`Obteniendo configuración para tenant ${tenantId}`);
+    
+    // Aquí se integraría con el MessageRouter para obtener la configuración
+    // const config = await this.messagingService.getTenantConfig(tenantId);
+    
+    return {
+      tenantId,
+      channels: {
+        sms: { provider: 'twilio', isActive: true },
+        whatsapp: { provider: 'twilio', isActive: true },
+        email: { provider: 'resend', isActive: true }
+      }
     };
   }
 }

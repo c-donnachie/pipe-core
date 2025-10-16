@@ -22,6 +22,14 @@ TWILIO_WHATSAPP_NUMBER=whatsapp:+14155238886
 TWILIO_PHONE_NUMBER=+1234567890
 TWILIO_WEBHOOK_URL=https://tu-dominio.com/twilio/webhook
 
+# Configuración de SendGrid
+SENDGRID_API_KEY=SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+SENDGRID_FROM_EMAIL=noreply@pipecore.com
+
+# Configuración de Resend
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+RESEND_FROM_EMAIL=noreply@pipecore.com
+
 # Configuración de base de datos (si se implementa)
 DATABASE_URL=postgresql://user:password@localhost:5432/pipecore
 
