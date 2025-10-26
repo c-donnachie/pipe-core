@@ -123,9 +123,9 @@ export const PREDEFINED_TEMPLATES: Omit<MessageTemplate, 'id' | 'tenantId' | 'cr
       
       <h3>📋 Detalles del pedido:</h3>
       <ul>
-        <li><strong>Total:</strong> ${{total}}</li>
-        <li><strong>Tiempo estimado:</strong> {{estimatedTime}}</li>
-        <li><strong>Método de entrega:</strong> {{deliveryMethod}}</li>
+        <li><strong>Total:</strong> $\{\{total\}\}</li>
+        <li><strong>Tiempo estimado:</strong> \{\{estimatedTime\}\}</li>
+        <li><strong>Método de entrega:</strong> \{\{deliveryMethod\}\}</li>
       </ul>
       
       <p>Te notificaremos cuando tu pedido esté listo.</p>

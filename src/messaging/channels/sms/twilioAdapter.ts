@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Twilio } from 'twilio';
 import { ProviderConfig } from '../../messageRouter';
-import { env } from '../../common/env';
+import { env } from '../../../common/env';
 
 @Injectable()
 export class TwilioSmsAdapter {

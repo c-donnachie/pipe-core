@@ -14,7 +14,17 @@ CREATE TABLE tenant_providers (
   tenant_id VARCHAR(255) NOT NULL,
   channel VARCHAR(50) NOT NULL, -- 'sms', 'whatsapp', 'email', 'push'
   provider VARCHAR(50) NOT NULL, -- 'twilio', 'meta', 'sendgrid', 'resend'
-  credentials JSONB NOT NULL, -- Credenciales específicas del tenant
+  
+  -- Credenciales principales (sin encriptar para uso directo)
+  api_key VARCHAR(500) NOT NULL,           -- API key del proveedor
+  secret_key VARCHAR(500),                 -- Secret key (opcional)
+  
+  -- Configuración adicional
+  from_email VARCHAR(255),                 -- Email de envío
+  from_phone VARCHAR(50),                  -- Teléfono de envío
+  webhook_url VARCHAR(500),                -- URL de webhook
+  
+  -- Seguridad
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW(),
@@ -31,20 +41,18 @@ CREATE INDEX idx_tenant_providers_active ON tenant_providers(is_active);
 
 ```sql
 -- Tenant TableFlow con Resend personalizado
-INSERT INTO tenant_providers (tenant_id, channel, provider, credentials, is_active) VALUES
-('tableflow_123', 'email', 'resend', 
- '{"apiKey": "re_tableflow_specific_key", "fromEmail": "noreply@tableflow.com"}', 
- true),
+INSERT INTO tenant_providers (tenant_id, channel, provider, api_key, from_email, is_active) VALUES
+('tableflow_123', 'email', 'resend', 're_tableflow_specific_key', 'noreply@tableflow.com', true),
 
 -- Tenant ROE con SendGrid personalizado
-('roe_789', 'email', 'sendgrid', 
- '{"apiKey": "SG.roe_sendgrid_key", "fromEmail": "noreply@roe.com"}', 
- true),
+('roe_789', 'email', 'sendgrid', 'SG.roe_sendgrid_key', 'noreply@roe.com', true),
 
 -- Tenant Genda con Meta WhatsApp personalizado
-('genda_456', 'whatsapp', 'meta', 
- '{"accessToken": "meta_genda_token", "phoneNumberId": "genda_phone_id", "verifyToken": "genda_verify"}', 
- true);
+('genda_456', 'whatsapp', 'meta', 'meta_genda_token', NULL, true);
+
+-- Tenant con configuración completa (Twilio SMS)
+INSERT INTO tenant_providers (tenant_id, channel, provider, api_key, secret_key, from_phone, webhook_url, is_active) VALUES
+('tableflow_123', 'sms', 'twilio', 'AC_tableflow_twilio_sid', 'tableflow_twilio_token', '+1234567890', 'https://pipecore.com/webhook/twilio', true);
 ```
 
 ## 🔄 Flujo de resolución de credenciales
@@ -96,7 +104,7 @@ export class MessageRouter {
   ): Promise<ProviderConfig | null> {
     try {
       const query = `
-        SELECT provider, credentials, is_active 
+        SELECT provider, api_key, secret_key, from_email, from_phone, webhook_url, is_active 
         FROM tenant_providers 
         WHERE tenant_id = $1 AND channel = $2 AND is_active = true
         ORDER BY updated_at DESC 
@@ -110,9 +118,21 @@ export class MessageRouter {
       }
 
       const row = result.rows[0];
+      
+      // Construir credentials basado en el proveedor
+      const credentials: Record<string, any> = {
+        apiKey: row.api_key,
+      };
+      
+      // Agregar campos específicos según el proveedor
+      if (row.secret_key) credentials.secretKey = row.secret_key;
+      if (row.from_email) credentials.fromEmail = row.from_email;
+      if (row.from_phone) credentials.fromPhone = row.from_phone;
+      if (row.webhook_url) credentials.webhookUrl = row.webhook_url;
+      
       return {
         provider: row.provider,
-        credentials: row.credentials,
+        credentials,
         isActive: row.is_active,
       };
     } catch (error) {
@@ -128,15 +148,28 @@ export class MessageRouter {
     tenantId: string,
     channel: 'whatsapp' | 'sms' | 'email' | 'push',
     provider: string,
-    credentials: Record<string, any>,
+    credentials: {
+      apiKey: string;
+      secretKey?: string;
+      fromEmail?: string;
+      fromPhone?: string;
+      webhookUrl?: string;
+    },
     isActive: boolean = true
   ): Promise<void> {
     const query = `
-      INSERT INTO tenant_providers (tenant_id, channel, provider, credentials, is_active)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO tenant_providers (
+        tenant_id, channel, provider, api_key, secret_key, 
+        from_email, from_phone, webhook_url, is_active
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       ON CONFLICT (tenant_id, channel, provider) 
       DO UPDATE SET 
-        credentials = EXCLUDED.credentials,
+        api_key = EXCLUDED.api_key,
+        secret_key = EXCLUDED.secret_key,
+        from_email = EXCLUDED.from_email,
+        from_phone = EXCLUDED.from_phone,
+        webhook_url = EXCLUDED.webhook_url,
         is_active = EXCLUDED.is_active,
         updated_at = NOW()
     `;
@@ -145,7 +178,11 @@ export class MessageRouter {
       tenantId, 
       channel, 
       provider, 
-      JSON.stringify(credentials), 
+      credentials.apiKey,
+      credentials.secretKey || null,
+      credentials.fromEmail || null,
+      credentials.fromPhone || null,
+      credentials.webhookUrl || null,
       isActive
     ]);
 

@@ -1,8 +1,12 @@
 export * from './messaging.module';
-export * from './messaging.service';
+export { MessagingService } from './messaging.service';
 export * from './messaging.controller';
 export * from './messageRouter';
-export * from './interfaces';
 export * from './constants';
-export * from './utils';
 export * from './channels';
+
+// Export interfaces first
+export * from './interfaces/messaging.interface';
+
+// Export utilities, excluding MessageTemplate to avoid conflict
+export { processTemplate, validateTemplateParams, getPredefinedTemplate, getPredefinedTemplatesByChannel, createCustomTemplate, PREDEFINED_TEMPLATES } from './utils';

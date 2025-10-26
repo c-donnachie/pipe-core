@@ -177,3 +177,16 @@ src/twilio/
 - [ ] Agregar métricas y dashboards
 - [ ] Soporte para mensajes programados
 - [ ] Integración con WhatsApp Business API
+
+
+CREATE TABLE message_logs (
+  id serial PRIMARY KEY,
+  tenant_id uuid NOT NULL,
+  channel text,        -- whatsapp / sms / email
+  provider text,       -- twilio / meta / sendgrid
+  message_id text,
+  to_number text,
+  message_body text,
+  status text,
+  created_at timestamptz DEFAULT now()
+);

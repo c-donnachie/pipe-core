@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { env } from '../common/env';
 
 export interface ProviderConfig {
-  provider: 'twilio' | 'meta' | 'sendgrid' | 'resend';
+  provider: 'twilio' | 'meta' | 'sendgrid' | 'resend' | 'expo';
   credentials: Record<string, any>;
   isActive: boolean;
 }
