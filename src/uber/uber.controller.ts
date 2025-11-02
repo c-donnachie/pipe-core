@@ -179,49 +179,113 @@ export class UberController {
   @Post('customers/:customer_id/delivery_quotes')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Create a delivery quote',
+    summary: 'Crear una cotización de entrega',
     description:
-      'Create a quote to check deliverability, validity and cost for delivery between two addresses. ' +
-      'This endpoint replicates the Uber Direct API Create Quote functionality. ' +
-      'Authentication is handled automatically via OAuth 2.0 using configured credentials. ' +
-      'Date fields are optional - if not provided, they will be generated automatically following Uber requirements.',
+      'Crea una cotización para verificar la entregabilidad, validez y costo de entrega entre dos direcciones. ' +
+      'Este endpoint replica la funcionalidad de Create Quote de la API de Uber Direct. ' +
+      'La autenticación se maneja automáticamente mediante OAuth 2.0 usando las credenciales configuradas. ' +
+      'Los campos de fecha son opcionales - si no se proporcionan, se generarán automáticamente siguiendo los requisitos de Uber.\n\n' +
+      '**Descripción de los Campos de la Respuesta:**\n' +
+      '- `kind`: Tipo de respuesta, siempre "delivery_quote" para este endpoint\n' +
+      '- `id`: Identificador único de la cotización (ej: "dqt_MTRWwBCKTY2dPW0acltKyg")\n' +
+      '- `created`: Marca de tiempo ISO 8601 cuando se creó la cotización\n' +
+      '- `expires`: Marca de tiempo ISO 8601 cuando expira la cotización (típicamente 15 minutos después de la creación)\n' +
+      '- `fee`: Tarifa de entrega en la unidad más pequeña de la moneda (ej: centavos para USD, pesos para CLP). Ejemplo: 251500 CLP = $2515.00 CLP\n' +
+      '- `currency`: Código de moneda en minúsculas (ej: "usd", "clp")\n' +
+      '- `currency_type`: Código de moneda en mayúsculas (ej: "USD", "CLP")\n' +
+      '- `dropoff_eta`: Tiempo estimado de llegada al destino en formato ISO 8601\n' +
+      '- `duration`: Duración total estimada de la entrega en segundos (desde el pickup hasta la finalización del dropoff)\n' +
+      '- `pickup_duration`: Duración estimada desde la solicitud hasta la finalización del pickup en segundos\n' +
+      '- `external_store_id`: El identificador de tienda externa que se envió en la solicitud\n' +
+      '- `dropoff_deadline`: El tiempo límite para el dropoff especificado en la solicitud (formato ISO 8601)',
   })
   @ApiHeader({
     name: 'x-uber-token',
     description:
-      'Custom Uber Direct access token (optional). ' +
-      'If not provided, the API will automatically obtain a token via OAuth.',
+      'Token de acceso personalizado de Uber Direct (opcional). ' +
+      'Si no se proporciona, la API obtendrá automáticamente un token mediante OAuth.',
     required: false,
   })
   @ApiResponse({
     status: 200,
-    description: 'Quote created successfully',
+    description: 'Cotización creada exitosamente',
     schema: {
       type: 'object',
       properties: {
-        quote_id: { type: 'string', example: 'quote_abc123xyz' },
-        fee: { type: 'number', example: 850 },
-        currency: { type: 'string', example: 'USD' },
-        currency_type: { type: 'string', example: 'USD' },
-        pickup_eta: { type: 'string', example: '2024-01-15T10:30:00Z' },
-        dropoff_eta: { type: 'string', example: '2024-01-15T11:00:00Z' },
-        deliverable: { type: 'boolean', example: true },
-        reason: { type: 'string', example: 'Delivery available' },
-        expires_at: { type: 'string', example: '2024-01-15T12:00:00Z' },
+        kind: {
+          type: 'string',
+          example: 'delivery_quote',
+          description: 'Tipo de respuesta, siempre "delivery_quote" para este endpoint',
+        },
+        id: {
+          type: 'string',
+          example: 'dqt_MTRWwBCKTY2dPW0acltKyg',
+          description: 'Identificador único de la cotización',
+        },
+        created: {
+          type: 'string',
+          example: '2025-11-02T09:20:27.622Z',
+          description: 'Marca de tiempo ISO 8601 cuando se creó la cotización',
+        },
+        expires: {
+          type: 'string',
+          example: '2025-11-02T09:35:27.622Z',
+          description: 'Marca de tiempo ISO 8601 cuando expira la cotización (típicamente 15 minutos después de la creación)',
+        },
+        fee: {
+          type: 'number',
+          example: 251500,
+          description: 'Tarifa de entrega en la unidad más pequeña de la moneda (ej: centavos para USD, pesos para CLP). Ejemplo: 251500 CLP = $2515.00 CLP',
+        },
+        currency: {
+          type: 'string',
+          example: 'clp',
+          description: 'Código de moneda en minúsculas (ej: "usd", "clp")',
+        },
+        currency_type: {
+          type: 'string',
+          example: 'CLP',
+          description: 'Código de moneda en mayúsculas (ej: "USD", "CLP")',
+        },
+        dropoff_eta: {
+          type: 'string',
+          example: '2025-11-02T15:55:00Z',
+          description: 'Tiempo estimado de llegada al destino en formato ISO 8601',
+        },
+        duration: {
+          type: 'number',
+          example: 394,
+          description: 'Duración total estimada de la entrega en segundos (desde el pickup hasta la finalización del dropoff)',
+        },
+        pickup_duration: {
+          type: 'number',
+          example: 369,
+          description: 'Duración estimada desde la solicitud hasta la finalización del pickup en segundos',
+        },
+        external_store_id: {
+          type: 'string',
+          example: 'store_12345',
+          description: 'El identificador de tienda externa que se envió en la solicitud',
+        },
+        dropoff_deadline: {
+          type: 'string',
+          example: '2025-11-02T16:15:00Z',
+          description: 'El tiempo límite para el dropoff especificado en la solicitud (formato ISO 8601)',
+        },
       },
     },
   })
   @ApiResponse({
     status: 400,
-    description: 'Bad request - Invalid input data or missing Customer ID',
+    description: 'Solicitud inválida - Datos de entrada inválidos o Customer ID faltante',
   })
   @ApiResponse({
     status: 401,
-    description: 'Unauthorized - Invalid or expired OAuth credentials',
+    description: 'No autorizado - Credenciales OAuth inválidas o expiradas',
   })
   @ApiResponse({
     status: 500,
-    description: 'Internal server error',
+    description: 'Error interno del servidor',
   })
   async createQuote(
     @Param('customer_id') customerId: string,
