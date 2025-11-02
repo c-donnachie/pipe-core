@@ -742,9 +742,10 @@ export class CreateDeliveryDto {
   quote_id?: string;
 
   @ApiProperty({
-    description: 'Undeliverable action',
-    example: 'leave_at_door',
-    enum: ['leave_at_door', 'return_to_sender', 'contact_customer'],
+    description: 'Undeliverable action. Default is "return". Cannot be "leave_at_door" when signature, PIN, or ID verification requirements are applied.',
+    example: 'return',
+    enum: ['leave_at_door', 'return', 'discard'],
+    default: 'return',
   })
   @IsNotEmpty()
   @IsString()

@@ -168,6 +168,20 @@ export class UberService {
         );
         
         // Provide more helpful error messages for common issues
+        if (data.code === 'customer_blocked') {
+          const errorMessage = {
+            code: data.code,
+            message: data.message,
+            kind: data.kind,
+            helpful_info: {
+              suggestion: 'El customer_id no está autorizado para esta acción. Verifica que: 1) El customer_id pertenezca a tu organización, 2) El customer esté habilitado en el dashboard de Uber Direct, 3) Las credenciales OAuth sean de la misma cuenta.',
+              customer_id: customerId,
+            },
+          };
+          this.logger.error(`Customer blocked error details: ${JSON.stringify(errorMessage, null, 2)}`);
+          throw new HttpException(errorMessage, response.status);
+        }
+        
         if (data.code === 'address_undeliverable') {
           const errorMessage = {
             code: data.code,
