@@ -4,6 +4,13 @@ dotenv.config();
 
 export const env = {
   port: process.env.PORT || 3000,
+  database: {
+    url: process.env.DATABASE_URL || '',
+  },
+  auth: {
+    serviceRoleSecret: process.env.SERVICE_ROLE_SECRET || '',
+    jwtSecret: process.env.JWT_SECRET || '',
+  },
   uber: {
     clientId: process.env.UBER_DIRECT_CLIENT_ID || '',
     clientSecret: process.env.UBER_DIRECT_CLIENT_SECRET || '',
