@@ -1,0 +1,136 @@
+{
+    "dropoff_address": "{\"street_address\":[\"Av. Quilín 110\"],\"city\":\"Santiago\",\"state\":\"Región Metropolitana\",\"zip_code\":\"7810000\",\"country\":\"CL\"}",
+    "dropoff_name": "Carlos González",
+    "dropoff_phone_number": "+56987654321",
+    "manifest_items": [
+        {
+            "name": "Pizza Margherita",
+            "quantity": 2,
+            "size": "medium",
+            "dimensions": {
+                "length": 30,
+                "height": 20,
+                "depth": 15
+            },
+            "price": 1500,
+            "must_be_upright": true,
+            "weight": 500,
+            "vat_percentage": 21
+        },
+        {
+            "name": "Pizza Familiar",
+            "quantity": 1,
+            "size": "xlarge",
+            "dimensions": {
+                "length": 40,
+                "height": 25,
+                "depth": 20
+            },
+            "price": 3500,
+            "must_be_upright": true,
+            "weight": 1200,
+            "vat_percentage": 21
+        }
+    ],
+    "pickup_address": "{\"street_address\":[\"Av. Quilín 107\"],\"city\":\"Santiago\",\"state\":\"Región Metropolitana\",\"zip_code\":\"7810000\",\"country\":\"CL\"}",
+    "pickup_name": "María Rodríguez",
+    "pickup_phone_number": "+56912345678",
+    "pickup_business_name": "Pizzería Don Mario",
+    "pickup_latitude": -33.4865639,
+    "pickup_longitude": -70.6169702,
+    "pickup_notes": "Ring doorbell twice",
+    "pickup_verification": {
+        "signature": true,
+        "signature_requirement": {
+            "enabled": true,
+            "collect_signer_name": true,
+            "collect_signer_relationship": false
+        },
+        "barcodes": [
+            {
+                "value": "123456789",
+                "type": "CODE128"
+            },
+            {
+                "value": "987654321",
+                "type": "CODE128"
+            }
+        ],
+        "picture": true
+    },
+    "dropoff_business_name": "Edificio Corporativo",
+    "dropoff_latitude": -33.48657,
+    "dropoff_longitude": -70.61698,
+    "dropoff_notes": "Leave at reception",
+    "dropoff_seller_notes": "Handle with care",
+    "dropoff_verification": {
+        "signature": true,
+        "signature_requirement": {
+            "enabled": true,
+            "collect_signer_name": true,
+            "collect_signer_relationship": false
+        },
+        "barcodes": [
+            {
+                "value": "ABC123456",
+                "type": "CODE39"
+            },
+            {
+                "value": "QR123456789",
+                "type": "QR"
+            }
+        ],
+        "identification": {
+            "min_age": 18
+        },
+        "picture": true
+    },
+    "deliverable_action": "deliverable_action_meet_at_door",
+    "manifest_reference": "ORDER_12345",
+    "manifest_total_value": 5000,
+    "quote_id": "dqt_dFWrh7BeSyue0ZolLfyHuQ",
+    "undeliverable_action": "return",
+    "pickup_ready_dt": "2025-11-02T15:30:00.000Z",
+    "pickup_deadline_dt": "2025-11-02T16:00:00.000Z",
+    "dropoff_ready_dt": "2025-11-02T15:55:00.000Z",
+    "dropoff_deadline_dt": "2025-11-02T16:15:00.000Z",
+    "requires_dropoff_signature": true,
+    "requires_id": false,
+    "tip": 500,
+    "idempotency_key": "delivery_dFWrh7BeSyue0ZolLfyHuQ_2025_11_02",
+    "external_store_id": "store_12345",
+    "return_verification": {
+        "signature": true,
+        "signature_requirement": {
+            "enabled": true,
+            "collect_signer_name": true,
+            "collect_signer_relationship": false
+        },
+        "barcodes": [
+            {
+                "value": "RETURN123",
+                "type": "CODE39"
+            },
+            {
+                "value": "RETURNQR456",
+                "type": "QR"
+            }
+        ],
+        "picture": true
+    },
+    "external_user_info": {
+        "merchant_account": {
+            "account_created_at": "2024-01-01T00:00:00Z",
+            "email": "merchant@example.com"
+        },
+        "device": {
+            "id": "device_12345"
+        }
+    },
+    "external_id": "ext_delivery_12345",
+    "test_specifications": {
+        "robo_courier_specification": {
+            "mode": "auto"
+        }
+    }
+}
