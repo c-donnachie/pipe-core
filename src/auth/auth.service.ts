@@ -1,6 +1,6 @@
 import { Injectable, Logger, ConflictException, InternalServerErrorException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
-import { RegisterTenantDto } from './interfaces/register-tenant.dto';
+import { RegisterTenantDto } from '../internal/interfaces/register-tenant.dto';
 
 @Injectable()
 export class AuthService {

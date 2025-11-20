@@ -30,6 +30,8 @@ async function bootstrap() {
     )
     .setVersion('1.0')
     .addTag('uber', 'Uber Direct delivery integration endpoints')
+    .addTag('Internal API - Tenants', 'Endpoints internos para gestión de tenants')
+    .addTag('Internal API - Monitoring', 'Endpoints internos para monitoreo del sistema')
     .addBearerAuth(
       {
         type: 'http',
@@ -40,6 +42,16 @@ async function bootstrap() {
         in: 'header',
       },
       'uber-token',
+    )
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        name: 'Authorization',
+        description: 'Enter SERVICE_ROLE_SECRET for internal API endpoints. Required for /pipecore/internal/* endpoints.',
+        in: 'header',
+      },
+      'service-role-secret',
     )
     .addApiKey(
       {
