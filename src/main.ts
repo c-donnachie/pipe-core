@@ -67,4 +67,8 @@ async function bootstrap() {
   logger.log(`📚 API Documentation available at http://localhost:${port}/api/docs`);
 }
 
-bootstrap();
+bootstrap().catch((error) => {
+  const logger = new Logger('Bootstrap');
+  logger.error('❌ Error starting application', error);
+  process.exit(1);
+});
