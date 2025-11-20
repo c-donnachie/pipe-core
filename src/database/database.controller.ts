@@ -27,13 +27,6 @@ export class DatabaseController {
             version: { type: 'string' },
           },
         },
-        environment: {
-          type: 'object',
-          properties: {
-            databaseUrl: { type: 'string' },
-            nodeEnv: { type: 'string' },
-          },
-        },
       },
     },
   })
@@ -55,17 +48,9 @@ export class DatabaseController {
             connected: false,
             error: 'Variable de entorno DATABASE_URL no encontrada',
           },
-          environment: {
-            databaseUrl: 'No configurada',
-            nodeEnv: process.env.NODE_ENV || 'development',
-          },
+          timestamp: new Date().toISOString(),
         };
       }
-
-      // Ocultar credenciales en la respuesta
-      const maskedUrl = databaseUrl
-        ? databaseUrl.replace(/:[^:@]+@/, ':****@')
-        : 'No configurada';
 
       // Probar conexión con una query simple
       const result = await this.databaseService.query<{ now: string; version: string }>(
@@ -84,10 +69,6 @@ export class DatabaseController {
           serverTime: dbInfo.now,
           version: dbInfo.version.split(' ')[0] + ' ' + dbInfo.version.split(' ')[1], // PostgreSQL 15.4
         },
-        environment: {
-          databaseUrl: maskedUrl,
-          nodeEnv: process.env.NODE_ENV || 'development',
-        },
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
@@ -99,12 +80,6 @@ export class DatabaseController {
         database: {
           connected: false,
           error: error.message || 'Error desconocido',
-        },
-        environment: {
-          databaseUrl: process.env.DATABASE_URL
-            ? process.env.DATABASE_URL.replace(/:[^:@]+@/, ':****@')
-            : 'No configurada',
-          nodeEnv: process.env.NODE_ENV || 'development',
         },
         timestamp: new Date().toISOString(),
       };

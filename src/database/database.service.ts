@@ -15,17 +15,30 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
+    // Detectar si es Render (requiere SSL siempre)
+    const isRender = databaseUrl.includes('render.com') || process.env.RENDER;
+    
+    // Render requiere SSL siempre (no solo en producción)
+    const requiresSSL = isRender;
+
     this.pool = new Pool({
       connectionString: databaseUrl,
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+      ssl: requiresSSL ? { rejectUnauthorized: false } : false,
       max: 20,
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
+      connectionTimeoutMillis: 10000, // Aumentado para Render (puede ser más lento)
+      // Configuraciones adicionales para Render
+      ...(isRender && {
+        statement_timeout: 30000, // 30 segundos timeout para queries
+        query_timeout: 30000,
+      }),
     });
 
     this.pool.on('error', (err) => {
       this.logger.error('Error inesperado en el pool de conexiones PostgreSQL', err);
     });
+
+    this.logger.log(`Conexión PostgreSQL configurada (${isRender ? 'Render' : 'Local'}, SSL: ${requiresSSL})`);
   }
 
   async onModuleInit() {
