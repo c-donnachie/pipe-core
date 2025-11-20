@@ -6,6 +6,17 @@ El módulo de autenticación maneja:
 - ✅ Registro de tenants desde Supabase
 - ✅ Validación de JWT firmados con `api_secret` del tenant
 - ✅ Protección de endpoints internos con `SERVICE_ROLE_SECRET`
+- ✅ Validación de estado de tenant usando campo `status` (active/inactive/suspended)
+- ✅ Scripts de utilidad para desarrollo y testing
+
+## Cambios Recientes
+
+### Actualización del Esquema (v2.0)
+
+- **Simplificación del esquema**: El módulo ahora usa únicamente el campo `status` para validar el estado del tenant (eliminada compatibilidad con `is_active`)
+- **Esquema estándar**: La tabla `tenants` incluye el campo `description` y validación estricta de `status`
+- **Logs opcionales**: El registro en `tenant_logs` es opcional y no bloquea el registro del tenant
+- **Mejor manejo de errores**: Mensajes de error más descriptivos y logging mejorado
 
 ## Arquitectura
 
@@ -97,6 +108,12 @@ export class DeliveryController {
 - `Authorization: Bearer <JWT>`
 - `X-Tenant-Id: <tenant_id>`
 
+**Validación:**
+- Verifica que el tenant existe en la base de datos
+- Verifica que el tenant tiene `status = 'active'`
+- Valida el JWT usando el `api_secret` del tenant
+- Compara el `tenantId` del JWT con el header `X-Tenant-Id`
+
 ### `InternalApiGuard`
 
 **Uso:** Protege endpoints internos (como `/pipecore/internal/*`).
@@ -129,29 +146,61 @@ Registra un nuevo tenant en la base de datos.
 
 #### `getTenantSecret(tenantId: string)`
 
-Obtiene el `api_secret` de un tenant para validar JWT.
+Obtiene el `api_secret` de un tenant activo para validar JWT. Solo retorna el secreto si el tenant tiene `status = 'active'`.
+
+**Retorna:** `string | null` - El `api_secret` del tenant o `null` si no existe o no está activo.
 
 #### `validateTenant(tenantId: string)`
 
-Verifica si un tenant existe y está activo.
+Verifica si un tenant existe y está activo (`status = 'active'`).
+
+**Retorna:** `boolean` - `true` si el tenant existe y está activo, `false` en caso contrario.
+
+**Nota:** La validación usa únicamente el campo `status`, no `is_active`.
 
 ## Estructura de Base de Datos
 
 ### Tabla `tenants`
 
+El esquema estándar de la tabla `tenants` es:
+
 ```sql
 CREATE TABLE tenants (
-    id UUID PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     tenant_id VARCHAR(255) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
+    description TEXT,
     api_key VARCHAR(255) NOT NULL,
     api_secret VARCHAR(255) NOT NULL,
-    status VARCHAR(20) DEFAULT 'active',
+    status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'suspended')),
     settings JSONB DEFAULT '{}',
     services JSONB DEFAULT '{}',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Índices
+CREATE INDEX idx_tenants_tenant_id ON tenants(tenant_id);
+CREATE INDEX idx_tenants_api_key ON tenants(api_key);
+CREATE INDEX idx_tenants_status ON tenants(status);
+
+-- Trigger para updated_at automático
+CREATE TRIGGER update_tenants_updated_at
+BEFORE UPDATE ON tenants
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+```
+
+**Notas importantes:**
+- El campo `status` solo acepta valores: `'active'`, `'inactive'`, `'suspended'`
+- El campo `description` es opcional
+- El campo `name` se establece automáticamente con el valor de `tenant_id` si no se proporciona
+- Los campos `settings` y `services` son JSONB y se inicializan con objetos vacíos por defecto
+- El trigger actualiza automáticamente `updated_at` en cada actualización
+
+Para recrear la tabla con el esquema correcto, ejecuta:
+```bash
+psql $DATABASE_URL -f db/pipecore/recreate-tenants.sql
 ```
 
 ## Ejemplo de Uso Completo
@@ -216,15 +265,113 @@ export class UberController {
 }
 ```
 
+## Registro de Tenants de Prueba
+
+Para desarrollo y testing, puedes registrar tenants de prueba usando los scripts incluidos:
+
+### Opción 1: Script Bash (Recomendado)
+
+```bash
+# Asegúrate de que el servidor esté corriendo primero
+npm run start:dev
+
+# En otra terminal, ejecuta:
+./scripts/register-test-tenant-simple.sh test-demo
+```
+
+### Opción 2: Script Node.js
+
+```bash
+node scripts/register-test-tenant.js test-demo
+```
+
+### Opción 3: cURL Directo
+
+```bash
+export SERVICE_ROLE_SECRET="tu_secreto_aqui"
+
+curl -X POST http://localhost:3000/pipecore/internal/register-tenant \
+  -H "Authorization: Bearer $SERVICE_ROLE_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tenantId": "test-demo",
+    "apiKey": "pk_test_123",
+    "apiSecret": "sk_test_456",
+    "services": {
+      "delivery": true,
+      "messaging": true,
+      "payments": true
+    }
+  }'
+```
+
+### Generar JWT de Prueba
+
+Una vez registrado el tenant, puedes generar un JWT de prueba usando el endpoint de desarrollo:
+
+```bash
+curl -X GET http://localhost:3000/auth-test/generate-jwt \
+  -H "X-Tenant-Id: test-demo" \
+  -H "X-Api-Secret: sk_test_456"
+```
+
+### Probar Autenticación
+
+```bash
+# Usar el JWT generado para acceder a un endpoint protegido
+curl -X GET http://localhost:3000/auth-test/protected \
+  -H "Authorization: Bearer <JWT_TOKEN>" \
+  -H "X-Tenant-Id: test-demo"
+```
+
+## Endpoints de Prueba
+
+El módulo incluye endpoints de desarrollo para facilitar las pruebas:
+
+### `GET /auth-test/generate-jwt`
+
+Genera un JWT de prueba para un tenant.
+
+**Headers requeridos:**
+- `X-Tenant-Id`: ID del tenant
+- `X-Api-Secret`: API Secret del tenant
+
+### `GET /auth-test/protected`
+
+Endpoint protegido para probar la autenticación JWT.
+
+**Headers requeridos:**
+- `Authorization: Bearer <JWT>`
+- `X-Tenant-Id: <tenant_id>`
+
+### `GET /auth-test/validate-tenant/:tenantId`
+
+Verifica si un tenant existe y está activo.
+
 ## Variables de Entorno
 
 Ver `docs/RAILWAY_SETUP.md` para la configuración completa.
+
+**Variables requeridas:**
+- `SERVICE_ROLE_SECRET`: Secreto para proteger endpoints internos
+- `DATABASE_URL`: URL de conexión a PostgreSQL
+
+## Manejo de Errores
+
+El módulo incluye manejo robusto de errores:
+
+- **Errores de validación**: Se retornan con código `400` y mensajes descriptivos
+- **Tenant duplicado**: Se retorna `409 Conflict` con mensaje claro
+- **Errores de base de datos**: Se loggean y se retorna `500` con mensaje genérico (por seguridad)
+- **Logs opcionales**: El registro en `tenant_logs` es opcional y no bloquea el registro del tenant si falla
 
 ## Seguridad
 
 - ✅ `api_secret` nunca se expone al frontend
 - ✅ JWT se firma con `api_secret` del tenant
 - ✅ Endpoints internos protegidos con `SERVICE_ROLE_SECRET`
-- ✅ Validación de tenant activo en cada request
-- ✅ Logs de todas las operaciones de autenticación
+- ✅ Validación de tenant activo en cada request usando `status = 'active'`
+- ✅ Logs de todas las operaciones de autenticación (opcional, no crítico)
+- ✅ Validación estricta del campo `status` con CHECK constraint
+- ✅ Índices optimizados para búsquedas rápidas por `tenant_id`, `api_key` y `status`
 

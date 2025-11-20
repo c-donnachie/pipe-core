@@ -28,9 +28,8 @@ export class JwtDynamicGuard implements CanActivate {
 
     try {
       // Obtener el api_secret del tenant desde la base de datos
-      // Intentar con status primero
-      let tenant = await this.databaseService.queryOne<{ api_secret: string; status?: string; is_active?: boolean }>(
-        'SELECT api_secret, status, is_active FROM tenants WHERE tenant_id = $1',
+      const tenant = await this.databaseService.queryOne<{ api_secret: string; status: string }>(
+        'SELECT api_secret, status FROM tenants WHERE tenant_id = $1',
         [tenantId]
       );
 
@@ -39,10 +38,9 @@ export class JwtDynamicGuard implements CanActivate {
         throw new UnauthorizedException('Tenant no encontrado');
       }
 
-      // Verificar si está activo (puede usar status o is_active)
-      const isActive = tenant.status === 'active' || tenant.is_active === true;
-      if (!isActive) {
-        this.logger.warn(`Tenant inactivo: ${tenantId}`);
+      // Verificar si está activo
+      if (tenant.status !== 'active') {
+        this.logger.warn(`Tenant inactivo: ${tenantId} (status: ${tenant.status})`);
         throw new UnauthorizedException('Tenant inactivo');
       }
 
