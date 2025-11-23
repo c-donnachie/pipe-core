@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsObject, ValidateNested, IsOptional, IsString, IsNumber, IsArray } from 'class-validator';
+import { IsNotEmpty, IsObject, ValidateNested, IsOptional, IsString, IsNumber, IsArray, ValidateIf } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -397,96 +397,96 @@ export class VerificationDto {
 }
 
 export class DimensionsDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Length of the item',
     example: 30,
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsNumber()
-  length: number;
+  length?: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Height of the item',
     example: 20,
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsNumber()
-  height: number;
+  height?: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Depth of the item',
     example: 15,
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsNumber()
-  depth: number;
+  depth?: number;
 }
 
 export class ManifestItemDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Name of the item',
     example: 'Pizza Margherita',
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  name: string;
+  name?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Quantity of items',
     example: 2,
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsNumber()
-  quantity: number;
+  quantity?: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Size of the item',
     example: 'medium',
     enum: ['small', 'medium', 'large', 'xlarge'],
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  size: string;
+  size?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Dimensions of the item',
     type: DimensionsDto,
   })
-  @IsNotEmpty()
+  @IsOptional()
   @ValidateNested()
   @Type(() => DimensionsDto)
-  dimensions: DimensionsDto;
+  dimensions?: DimensionsDto;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Price of the item in cents',
     example: 1500,
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsNumber()
-  price: number;
+  price?: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Whether item must be kept upright',
     example: true,
   })
-  @IsNotEmpty()
-  must_be_upright: boolean;
+  @IsOptional()
+  must_be_upright?: boolean;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Weight of the item in grams',
     example: 500,
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsNumber()
-  weight: number;
+  weight?: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'VAT percentage',
     example: 21,
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsNumber()
-  vat_percentage: number;
+  vat_percentage?: number;
 }
 
 export class MerchantAccountDto {
@@ -560,63 +560,63 @@ export class TestSpecificationsDto {
 }
 
 export class CreateDeliveryDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Dropoff address',
     example: 'Av. Providencia 1200, Providencia, Santiago, Chile',
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  dropoff_address: string;
+  dropoff_address?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Dropoff contact name',
     example: 'Carlos González',
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  dropoff_name: string;
+  dropoff_name?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Dropoff phone number',
     example: '+56987654321',
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  dropoff_phone_number: string;
+  dropoff_phone_number?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'List of manifest items',
     type: [ManifestItemDto],
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ManifestItemDto)
-  manifest_items: ManifestItemDto[];
+  manifest_items?: ManifestItemDto[];
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Pickup address',
     example: 'Av. Providencia 1234, Providencia, Santiago, Chile',
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  pickup_address: string;
+  pickup_address?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Pickup contact name',
     example: 'María Rodríguez',
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  pickup_name: string;
+  pickup_name?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Pickup phone number',
     example: '+56912345678',
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  pickup_phone_number: string;
+  pickup_phone_number?: string;
 
   @ApiProperty({
     description: 'Pickup business name',
@@ -626,21 +626,21 @@ export class CreateDeliveryDto {
   @IsString()
   pickup_business_name?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Pickup latitude',
     example: -33.4189,
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsNumber()
-  pickup_latitude: number;
+  pickup_latitude?: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Pickup longitude',
     example: -70.6069,
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsNumber()
-  pickup_longitude: number;
+  pickup_longitude?: number;
 
   @ApiProperty({
     description: 'Pickup notes',
@@ -667,21 +667,21 @@ export class CreateDeliveryDto {
   @IsString()
   dropoff_business_name?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Dropoff latitude',
     example: -33.4417,
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsNumber()
-  dropoff_latitude: number;
+  dropoff_latitude?: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Dropoff longitude',
     example: -70.6441,
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsNumber()
-  dropoff_longitude: number;
+  dropoff_longitude?: number;
 
   @ApiProperty({
     description: 'Dropoff notes',
@@ -708,16 +708,16 @@ export class CreateDeliveryDto {
   @Type(() => VerificationDto)
   dropoff_verification?: VerificationDto;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Deliverable action',
     example: 'deliverable_action_meet_at_door',
     enum: ['deliverable_action_meet_at_door', 'deliverable_action_leave_at_door'],
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  deliverable_action: string;
+  deliverable_action?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Manifest reference',
     example: 'ORDER_12345',
   })
@@ -725,13 +725,13 @@ export class CreateDeliveryDto {
   @IsString()
   manifest_reference?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Total value of manifest in cents',
     example: 3000,
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsNumber()
-  manifest_total_value: number;
+  manifest_total_value?: number;
 
   @ApiProperty({
     description: 'Quote ID from create quote endpoint',
@@ -741,15 +741,15 @@ export class CreateDeliveryDto {
   @IsString()
   quote_id?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Undeliverable action. Default is "return". Cannot be "leave_at_door" when signature, PIN, or ID verification requirements are applied.',
     example: 'return',
     enum: ['leave_at_door', 'return', 'discard'],
     default: 'return',
   })
-  @IsNotEmpty()
+  @ValidateIf((o) => o.undeliverable_action !== undefined && o.undeliverable_action !== null && o.undeliverable_action !== '')
   @IsString()
-  undeliverable_action: string;
+  undeliverable_action?: string;
 
   @ApiPropertyOptional({
     description: 'Pickup ready datetime (if not provided, will be generated automatically)',
@@ -783,19 +783,19 @@ export class CreateDeliveryDto {
   @IsString()
   dropoff_deadline_dt?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Whether dropoff signature is required',
     example: true,
   })
-  @IsNotEmpty()
-  requires_dropoff_signature: boolean;
+  @IsOptional()
+  requires_dropoff_signature?: boolean;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Whether ID verification is required',
     example: false,
   })
-  @IsNotEmpty()
-  requires_id: boolean;
+  @IsOptional()
+  requires_id?: boolean;
 
   @ApiProperty({
     description: 'Tip amount in cents',
@@ -813,13 +813,13 @@ export class CreateDeliveryDto {
   @IsString()
   idempotency_key?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'External store ID',
     example: 'store_santiago_123',
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  external_store_id: string;
+  external_store_id?: string;
 
   @ApiProperty({
     description: 'Return verification requirements',

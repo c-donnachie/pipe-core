@@ -1,10 +1,12 @@
-import { Controller, Post, Body, Headers, UseGuards, HttpCode, HttpStatus, Logger, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Body, Headers, UseGuards, HttpCode, HttpStatus, Logger, UnauthorizedException, BadRequestException, UsePipes } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiHeader } from '@nestjs/swagger';
 import { DatabaseService } from '../database/database.service';
 import { UberTokenService } from './services/uber-token.service';
 import { UberAuthService } from '../uber/uber-auth.service';
 import { UberService } from '../uber/uber.service';
 import { DeliveryQuoteInternalDto } from './interfaces/delivery-quote-internal.dto';
+import { DeliveryInternalDto } from './interfaces/delivery-internal.dto';
 import { InternalApiGuard } from './guards/internal-api.guard';
 import { env } from '../common/env';
 import { UBER_CONSTANTS } from '../uber/constants';
@@ -239,6 +241,198 @@ La autenticación se realiza mediante los headers \`x-tenant-key\` y \`x-tenant-
 
     this.logger.log(`Cotización creada exitosamente para tenant ID: ${tenant.id}`);
     return quote;
+  }
+
+  @Post('deliveries')
+  @UsePipes(new ValidationPipe({ skipMissingProperties: true, whitelist: false, forbidNonWhitelisted: false }))
+  @HttpCode(HttpStatus.OK)
+  @ApiHeader({ 
+    name: 'x-tenant-key', 
+    description: 'API Key pública del tenant',
+    required: true,
+    example: 'example_key'
+  })
+  @ApiHeader({ 
+    name: 'x-tenant-secret', 
+    description: 'API Secret del tenant (usado para validar credenciales)',
+    required: true,
+    example: 'demo_123'
+  })
+  @ApiOperation({
+    summary: 'Crear entrega',
+    description: `Crea una entrega usando Uber Direct API.
+
+Este endpoint valida las credenciales del tenant mediante \`api_key\` y \`api_secret\` y maneja tokens de Uber automáticamente.
+
+**Autenticación:**
+La autenticación se realiza mediante los headers \`x-tenant-key\` y \`x-tenant-secret\`. No requiere \`SERVICE_ROLE_SECRET\`.
+
+**Flujo:**
+1. Valida las credenciales del tenant (\`x-tenant-key\` y \`x-tenant-secret\`) en la tabla \`tenants\`
+2. Verifica que el tenant tenga \`status = 'active'\`
+3. Verifica si existe un token activo de Uber en la tabla \`uber_direct_tokens\`
+4. Si no hay token activo, genera uno nuevo automáticamente usando OAuth 2.0
+5. Guarda el token en la tabla \`uber_direct_tokens\`
+6. Usa el token para crear la entrega en Uber Direct API
+7. Retorna la entrega creada con todos los detalles
+
+**Headers requeridos:**
+- \`x-tenant-key\`: API Key pública del tenant (debe existir en la tabla \`tenants\`)
+- \`x-tenant-secret\`: API Secret del tenant (debe coincidir con el \`api_secret\` en la base de datos)
+
+**Campos del Request Body:**
+Los campos son los mismos que el endpoint público \`POST /uber/customers/:customer_id/deliveries\`, incluyendo direcciones, coordenadas, artículos del manifiesto, requisitos de verificación, etc.
+
+**Errores posibles:**
+- \`400 Bad Request\`: Headers faltantes (\`x-tenant-key\` o \`x-tenant-secret\`) o datos del body inválidos
+- \`401 Unauthorized\`: Tenant no encontrado, credenciales inválidas o tenant inactivo
+- \`500 Internal Server Error\`: Error interno del servidor o error al comunicarse con Uber Direct API
+
+**Notas importantes:**
+- El token de Uber se reutiliza si está activo (no ha expirado)
+- Los tokens se almacenan en la tabla \`uber_direct_tokens\` y se comparten entre todos los tenants
+- El \`customer_id\` se obtiene de la variable de entorno \`UBER_DIRECT_CUSTOMER_ID\``
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Entrega creada exitosamente',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', example: 'del_abc123xyz' },
+        status: { type: 'string', example: 'pending' },
+        complete: { type: 'boolean', example: false },
+        kind: { type: 'string', example: 'on_demand' },
+        pickup: {
+          type: 'object',
+          properties: {
+            address: { type: 'string', example: '456 Market St, San Francisco, CA 94103' },
+            latitude: { type: 'number', example: 37.7749 },
+            longitude: { type: 'number', example: -122.4194 },
+            name: { type: 'string', example: 'Jane Smith' },
+            phone_number: { type: 'string', example: '+14155555678' },
+          },
+        },
+        dropoff: {
+          type: 'object',
+          properties: {
+            address: { type: 'string', example: '123 Main St, San Francisco, CA 94102' },
+            latitude: { type: 'number', example: 37.7849 },
+            longitude: { type: 'number', example: -122.4094 },
+            name: { type: 'string', example: 'John Doe' },
+            phone_number: { type: 'string', example: '+14155551234' },
+          },
+        },
+        created: { type: 'string', format: 'date-time', example: '2025-01-15T10:30:00Z' },
+        updated: { type: 'string', format: 'date-time', example: '2025-01-15T10:35:00Z' },
+        pickup_eta: { type: 'string', format: 'date-time', example: '2025-01-15T10:45:00Z' },
+        dropoff_eta: { type: 'string', format: 'date-time', example: '2025-01-15T11:15:00Z' },
+        tracking_url: { type: 'string', example: 'https://track.uber.com/abc123' },
+      },
+    }
+  })
+  @ApiResponse({ 
+    status: 400, 
+    description: 'Bad Request - Headers faltantes o datos inválidos',
+    schema: {
+      type: 'object',
+      properties: {
+        statusCode: { type: 'number', example: 400 },
+        message: { type: 'string', example: 'Headers requeridos: x-tenant-key, x-tenant-secret' }
+      }
+    }
+  })
+  @ApiResponse({ 
+    status: 401, 
+    description: 'No autorizado - Credenciales inválidas o tenant inactivo',
+    schema: {
+      type: 'object',
+      properties: {
+        statusCode: { type: 'number', example: 401 },
+        message: { type: 'string', example: 'Tenant no encontrado o credenciales inválidas' }
+      }
+    }
+  })
+  @ApiResponse({ 
+    status: 500, 
+    description: 'Error interno del servidor',
+    schema: {
+      type: 'object',
+      properties: {
+        statusCode: { type: 'number', example: 500 },
+        message: { type: 'string', example: 'Error interno del servidor' }
+      }
+    }
+  })
+  async createDelivery(
+    @Body() deliveryData: any,
+    @Headers('x-tenant-key') apiKey: string,
+    @Headers('x-tenant-secret') apiSecret: string,
+  ) {
+    // Validar que los headers estén presentes
+    if (!apiKey || !apiSecret) {
+      throw new BadRequestException('Headers requeridos: x-tenant-key, x-tenant-secret');
+    }
+
+    this.logger.log(`Solicitud de entrega con API Key: ${apiKey.substring(0, 10)}...`);
+    this.logger.debug(`API Key recibida: ${apiKey.substring(0, 10)}...`);
+    this.logger.debug(`API Secret recibida: ${apiSecret.substring(0, 10)}...`);
+
+    // 1. Validar tenant en la tabla tenants usando api_key y api_secret
+    const tenant = await this.databaseService.queryOne<{
+      id: string;
+      api_key: string;
+      api_secret: string;
+      status: string;
+    }>(
+      `SELECT id, api_key, api_secret, status 
+       FROM tenants 
+       WHERE api_key = $1 AND api_secret = $2 AND status = 'active'`,
+      [apiKey, apiSecret]
+    );
+
+    if (!tenant) {
+      this.logger.warn(`Tenant no encontrado o credenciales inválidas para API Key: ${apiKey.substring(0, 10)}...`);
+      throw new UnauthorizedException('Tenant no encontrado o credenciales inválidas');
+    }
+
+    this.logger.debug(`Tenant encontrado. ID: ${tenant.id}, Status: ${tenant.status}`);
+    this.logger.log(`Tenant validado correctamente`);
+
+    // 2. Verificar si hay un token activo en uber_direct_tokens
+    let uberToken = await this.uberTokenService.getActiveToken();
+
+    // 3. Si no hay token activo, obtener uno nuevo
+    if (!uberToken) {
+      this.logger.log(`No hay token activo, generando nuevo token`);
+      
+      const tokenResponse = await this.uberAuthService.generateToken(
+        UBER_CONSTANTS.DEFAULT_GRANT_TYPE,
+        UBER_CONSTANTS.DEFAULT_SCOPE
+      );
+
+      // Guardar token en la base de datos
+      uberToken = await this.uberTokenService.saveToken(
+        tokenResponse.access_token,
+        tokenResponse.expires_in
+      );
+    }
+
+    // 4. Usar el token para crear la entrega
+    const customerId = env.uber.customerId;
+    if (!customerId) {
+      throw new Error('UBER_DIRECT_CUSTOMER_ID no está configurado');
+    }
+
+    // Pasar los datos directamente a Uber sin mapeo manual
+    const delivery = await this.uberService.createDelivery(
+      customerId,
+      deliveryData,
+      uberToken.access_token
+    );
+
+    this.logger.log(`Entrega creada exitosamente para tenant ID: ${tenant.id}`);
+    return delivery;
   }
 }
 

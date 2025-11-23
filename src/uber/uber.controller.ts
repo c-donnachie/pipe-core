@@ -9,7 +9,9 @@ import {
   HttpStatus,
   Param,
   Query,
+  UsePipes,
 } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -34,6 +36,7 @@ export class UberController {
   ) {}
 
   @Post('customers/:customer_id/deliveries')
+  @UsePipes(new ValidationPipe({ skipMissingProperties: true, whitelist: false, forbidNonWhitelisted: false }))
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Create a delivery',
@@ -121,7 +124,7 @@ export class UberController {
   })
   async createDelivery(
     @Param('customer_id') customerId: string,
-    @Body() createDeliveryDto: CreateDeliveryDto,
+    @Body() createDeliveryDto: any,
     @Headers('x-uber-token') customToken?: string,
   ) {
     this.logger.log(`Received create-delivery request for customer: ${customerId}`);

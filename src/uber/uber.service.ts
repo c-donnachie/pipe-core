@@ -14,31 +14,17 @@ export class UberService {
 
   async createDelivery(
     customerId: string,
-    deliveryData: CreateDeliveryRequest,
+    deliveryData: any,
     customToken?: string,
   ): Promise<CreateDeliveryResponse> {
     // Get token: use custom token if provided, otherwise get OAuth token
     const token = customToken || (await this.authService.getAccessToken());
 
-    if (!customerId) {
-      this.logger.error('No Customer ID provided');
-      throw new HttpException(
-        'Customer ID is required',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    // Validate coordinates
-    this.validateCoordinates(deliveryData);
-
-    // Generate dates automatically if not provided
-    const processedDeliveryData = this.generateDatesIfNeeded(deliveryData);
-
     const url = `${env.uber.baseUrl}/customers/${customerId}/deliveries`;
 
     try {
       this.logger.log(`Creating delivery to Uber API: ${url}`);
-      this.logger.debug(`Delivery data: ${JSON.stringify(processedDeliveryData)}`);
+      this.logger.debug(`Delivery data: ${JSON.stringify(deliveryData)}`);
       this.logger.debug(`Using token: ${token.substring(0, 20)}...${token.substring(token.length - 10)}`);
       this.logger.debug(`Token length: ${token.length}`);
 
@@ -54,7 +40,7 @@ export class UberService {
       const response = await fetch(url, {
         method: 'POST',
         headers,
-        body: JSON.stringify(processedDeliveryData),
+        body: JSON.stringify(deliveryData),
       });
 
       const data = await response.json();
