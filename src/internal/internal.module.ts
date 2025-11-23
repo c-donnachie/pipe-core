@@ -1,25 +1,29 @@
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../database/database.module';
 import { AuthModule } from '../auth/auth.module';
-import { InternalTenantsController } from './tenants.controller';
-import { InternalMonitoringController } from './monitoring.controller';
+import { UberModule } from '../uber/uber.module';
+import { TenantsController } from './tenants.controller';
+import { DeliveryController } from './delivery.controller';
+import { UberTokenService } from './services/uber-token.service';
 import { InternalApiGuard } from './guards/internal-api.guard';
 
 @Module({
   imports: [
     DatabaseModule,
     AuthModule,
+    UberModule,
   ],
   controllers: [
-    InternalTenantsController,
-    InternalMonitoringController,
+    TenantsController,
+    DeliveryController,
   ],
   providers: [
+    UberTokenService,
     InternalApiGuard,
   ],
   exports: [
+    UberTokenService,
     InternalApiGuard,
   ],
 })
 export class InternalModule {}
-

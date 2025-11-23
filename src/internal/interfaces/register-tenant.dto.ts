@@ -35,4 +35,3 @@ export class RegisterTenantDto {
   @Type(() => ServicesDto)
   services?: ServicesDto;
 }
-
