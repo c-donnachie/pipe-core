@@ -23,77 +23,182 @@ export class DeliveryController {
 
   @Post('delivery-quotes')
   @HttpCode(HttpStatus.OK)
-  @ApiHeader({ name: 'x-tenant-id', description: 'ID del tenant', required: true })
-  @ApiHeader({ name: 'x-tenant-key', description: 'API Key del tenant', required: true })
-  @ApiHeader({ name: 'x-tenant-secret', description: 'API Secret del tenant', required: true })
+  @ApiHeader({ 
+    name: 'x-tenant-key', 
+    description: `API Key pública del tenant.
+    
+**Tipo:** String
+**Formato:** Prefijo recomendado \`pk_live_\` o \`pk_test_\` seguido de caracteres alfanuméricos
+**Ejemplo:** "example_key"
+**Uso:** Se usa junto con \`x-tenant-secret\` para identificar y validar al tenant
+**Validación:** Debe existir un tenant activo con esta API Key en la base de datos`,
+    required: true,
+    example: 'example_key'
+  })
+  @ApiHeader({ 
+    name: 'x-tenant-secret', 
+    description: `API Secret del tenant (usado para validar credenciales).
+    
+**Tipo:** String
+**Formato:** Prefijo recomendado \`sk_live_\` o \`sk_test_\` seguido de caracteres alfanuméricos
+**Ejemplo:** "demo_123"
+**Seguridad:** ⚠️ **NUNCA** debe exponerse al frontend o en logs públicos
+**Uso:** Se usa junto con \`x-tenant-key\` para validar las credenciales del tenant
+**Validación:** Debe coincidir con el \`api_secret\` del tenant en la base de datos`,
+    required: true,
+    example: 'demo_123'
+  })
   @ApiOperation({
     summary: 'Crear cotización de entrega',
-    description: 'Endpoint que valida las credenciales del tenant y maneja tokens de Uber automáticamente.'
+    description: `Crea una cotización de entrega usando Uber Direct API.
+
+Este endpoint valida las credenciales del tenant mediante \`api_key\` y \`api_secret\` y maneja tokens de Uber automáticamente.
+
+**Autenticación:**
+La autenticación se realiza mediante los headers \`x-tenant-key\` y \`x-tenant-secret\`. No requiere \`SERVICE_ROLE_SECRET\`.
+
+**Flujo:**
+1. Valida las credenciales del tenant (\`x-tenant-key\` y \`x-tenant-secret\`) en la tabla \`tenants\`
+2. Verifica que el tenant tenga \`status = 'active'\`
+3. Verifica si existe un token activo de Uber en la tabla \`uber_direct_tokens\`
+4. Si no hay token activo, genera uno nuevo automáticamente usando OAuth 2.0
+5. Guarda el token en la tabla \`uber_direct_tokens\`
+6. Usa el token para crear la cotización en Uber Direct API
+7. Retorna la cotización con todos los detalles
+
+**Headers requeridos:**
+- \`x-tenant-key\`: API Key pública del tenant (debe existir en la tabla \`tenants\`)
+- \`x-tenant-secret\`: API Secret del tenant (debe coincidir con el \`api_secret\` en la base de datos)
+
+**Campos del Request Body:**
+- \`dropoff_address\` (obligatorio): Dirección de entrega en formato JSON string
+- \`pickup_address\` (obligatorio): Dirección de recogida en formato JSON string
+- \`pickup_latitude\` (obligatorio): Latitud de la ubicación de recogida (-90 a 90)
+- \`pickup_longitude\` (obligatorio): Longitud de la ubicación de recogida (-180 a 180)
+- \`dropoff_latitude\` (obligatorio): Latitud de la ubicación de entrega (-90 a 90)
+- \`dropoff_longitude\` (obligatorio): Longitud de la ubicación de entrega (-180 a 180)
+- \`pickup_ready_dt\` (opcional): Fecha y hora en que el pedido estará listo para recogida (ISO 8601). Si no se proporciona, se genera automáticamente.
+- \`pickup_deadline_dt\` (opcional): Fecha y hora límite para completar la recogida (ISO 8601). Si no se proporciona, se genera automáticamente.
+- \`dropoff_ready_dt\` (opcional): Fecha y hora en que el pedido estará listo para entrega (ISO 8601). Si no se proporciona, se genera automáticamente.
+- \`dropoff_deadline_dt\` (opcional): Fecha y hora límite para completar la entrega (ISO 8601). Si no se proporciona, se genera automáticamente.
+- \`pickup_phone_number\` (obligatorio): Número de teléfono de contacto para la recogida (formato internacional con +)
+- \`dropoff_phone_number\` (obligatorio): Número de teléfono de contacto para la entrega (formato internacional con +)
+- \`manifest_total_value\` (obligatorio): Valor total de los artículos en centavos (unidad más pequeña de la moneda)
+- \`external_store_id\` (obligatorio): Identificador externo de la tienda
+
+**Descripción de los Campos de la Respuesta:**
+- \`kind\`: Tipo de respuesta, siempre "delivery_quote" para este endpoint
+- \`id\`: Identificador único de la cotización (ej: "dqt_MTRWwBCKTY2dPW0acltKyg")
+- \`created\`: Marca de tiempo ISO 8601 cuando se creó la cotización
+- \`expires\`: Marca de tiempo ISO 8601 cuando expira la cotización (típicamente 15 minutos después de la creación)
+- \`fee\`: Tarifa de entrega en la unidad más pequeña de la moneda (ej: centavos para USD, pesos para CLP). Ejemplo: 251500 CLP = $2515.00 CLP
+- \`currency\`: Código de moneda en minúsculas (ej: "usd", "clp")
+- \`currency_type\`: Código de moneda en mayúsculas (ej: "USD", "CLP")
+- \`dropoff_eta\`: Tiempo estimado de llegada al destino en formato ISO 8601
+- \`duration\`: Duración total estimada de la entrega en segundos (desde el pickup hasta la finalización del dropoff)
+- \`pickup_duration\`: Duración estimada desde la solicitud hasta la finalización del pickup en segundos
+- \`external_store_id\`: El identificador de tienda externa que se envió en la solicitud
+- \`dropoff_deadline\`: El tiempo límite para el dropoff especificado en la solicitud (formato ISO 8601)
+
+**Errores posibles:**
+- \`400 Bad Request\`: Headers faltantes (\`x-tenant-key\` o \`x-tenant-secret\`) o datos del body inválidos
+- \`401 Unauthorized\`: Tenant no encontrado, credenciales inválidas o tenant inactivo
+- \`500 Internal Server Error\`: Error interno del servidor o error al comunicarse con Uber Direct API
+
+**Notas importantes:**
+- El token de Uber se reutiliza si está activo (no ha expirado)
+- Los tokens se almacenan en la tabla \`uber_direct_tokens\` y se comparten entre todos los tenants
+- Las direcciones deben ser strings JSON válidos, no objetos
+- Las coordenadas GPS deben corresponder con las direcciones especificadas`
   })
   @ApiResponse({
     status: 200,
     description: 'Cotización creada exitosamente',
+    schema: {
+      type: 'object',
+      properties: {
+        kind: { type: 'string', example: 'delivery_quote' },
+        id: { type: 'string', example: 'dqt_MTRWwBCKTY2dPW0acltKyg' },
+        created: { type: 'string', format: 'date-time', example: '2025-11-02T09:20:27.622Z' },
+        expires: { type: 'string', format: 'date-time', example: '2025-11-02T09:35:27.622Z' },
+        fee: { type: 'number', example: 251500 },
+        currency: { type: 'string', example: 'clp' },
+        currency_type: { type: 'string', example: 'CLP' },
+        dropoff_eta: { type: 'string', format: 'date-time' },
+        duration: { type: 'number', example: 1800 },
+        pickup_duration: { type: 'number', example: 600 },
+        external_store_id: { type: 'string', example: 'store_12345' },
+        dropoff_deadline: { type: 'string', format: 'date-time' }
+      }
+    }
   })
-  @ApiResponse({ status: 400, description: 'Bad Request - Headers faltantes' })
-  @ApiResponse({ status: 401, description: 'No autorizado - Credenciales inválidas' })
-  @ApiResponse({ status: 500, description: 'Error interno del servidor' })
+  @ApiResponse({ 
+    status: 400, 
+    description: 'Bad Request - Headers faltantes o datos inválidos',
+    schema: {
+      type: 'object',
+      properties: {
+        statusCode: { type: 'number', example: 400 },
+        message: { type: 'string', example: 'Headers requeridos: x-tenant-key, x-tenant-secret' }
+      }
+    }
+  })
+  @ApiResponse({ 
+    status: 401, 
+    description: 'No autorizado - Credenciales inválidas o tenant inactivo',
+    schema: {
+      type: 'object',
+      properties: {
+        statusCode: { type: 'number', example: 401 },
+        message: { type: 'string', example: 'Tenant no encontrado o credenciales inválidas' }
+      }
+    }
+  })
+  @ApiResponse({ 
+    status: 500, 
+    description: 'Error interno del servidor',
+    schema: {
+      type: 'object',
+      properties: {
+        statusCode: { type: 'number', example: 500 },
+        message: { type: 'string', example: 'Error interno del servidor' }
+      }
+    }
+  })
   async createDeliveryQuote(
     @Body() dto: DeliveryQuoteInternalDto,
-    @Headers('x-tenant-id') tenantId: string,
     @Headers('x-tenant-key') apiKey: string,
     @Headers('x-tenant-secret') apiSecret: string,
   ) {
     // Validar que los headers estén presentes
-    if (!tenantId || !apiKey || !apiSecret) {
-      throw new BadRequestException('Headers requeridos: x-tenant-id, x-tenant-key, x-tenant-secret');
+    if (!apiKey || !apiSecret) {
+      throw new BadRequestException('Headers requeridos: x-tenant-key, x-tenant-secret');
     }
 
-    this.logger.log(`Solicitud de cotización para tenant: ${tenantId}`);
+    this.logger.log(`Solicitud de cotización con API Key: ${apiKey.substring(0, 10)}...`);
     this.logger.debug(`API Key recibida: ${apiKey.substring(0, 10)}...`);
     this.logger.debug(`API Secret recibida: ${apiSecret.substring(0, 10)}...`);
 
-    // 1. Validar tenant en la tabla tenants
-    // Primero verificar si el tenant existe
-    const tenantExists = await this.databaseService.queryOne<{
-      tenant_id: string;
+    // 1. Validar tenant en la tabla tenants usando api_key y api_secret
+    const tenant = await this.databaseService.queryOne<{
+      id: string;
       api_key: string;
       api_secret: string;
       status: string;
     }>(
-      `SELECT tenant_id, api_key, api_secret, status 
+      `SELECT id, api_key, api_secret, status 
        FROM tenants 
-       WHERE tenant_id = $1`,
-      [tenantId]
+       WHERE api_key = $1 AND api_secret = $2 AND status = 'active'`,
+      [apiKey, apiSecret]
     );
 
-    if (!tenantExists) {
-      this.logger.warn(`Tenant no encontrado: ${tenantId}`);
-      throw new UnauthorizedException(`Tenant no encontrado: ${tenantId}`);
+    if (!tenant) {
+      this.logger.warn(`Tenant no encontrado o credenciales inválidas para API Key: ${apiKey.substring(0, 10)}...`);
+      throw new UnauthorizedException('Tenant no encontrado o credenciales inválidas');
     }
 
-    this.logger.debug(`Tenant encontrado. Status: ${tenantExists.status}`);
-    this.logger.debug(`API Key en BD: ${tenantExists.api_key.substring(0, 10)}...`);
-    this.logger.debug(`API Secret en BD: ${tenantExists.api_secret.substring(0, 10)}...`);
-
-    // Verificar credenciales y status
-    if (tenantExists.status !== 'active') {
-      this.logger.warn(`Tenant inactivo: ${tenantId} (status: ${tenantExists.status})`);
-      throw new UnauthorizedException(`Tenant inactivo: ${tenantId}`);
-    }
-
-    if (tenantExists.api_key !== apiKey) {
-      this.logger.warn(`API Key no coincide para tenant: ${tenantId}`);
-      throw new UnauthorizedException('API Key inválida');
-    }
-
-    if (tenantExists.api_secret !== apiSecret) {
-      this.logger.warn(`API Secret no coincide para tenant: ${tenantId}`);
-      throw new UnauthorizedException('API Secret inválida');
-    }
-
-    const tenant = tenantExists;
-
-    this.logger.log(`Tenant validado: ${tenantId}`);
+    this.logger.debug(`Tenant encontrado. ID: ${tenant.id}, Status: ${tenant.status}`);
+    this.logger.log(`Tenant validado correctamente`);
 
     // 2. Verificar si hay un token activo en uber_direct_tokens
     let uberToken = await this.uberTokenService.getActiveToken();
@@ -145,7 +250,7 @@ export class DeliveryController {
       uberToken.access_token
     );
 
-    this.logger.log(`Cotización creada exitosamente para tenant: ${tenantId}`);
+    this.logger.log(`Cotización creada exitosamente para tenant ID: ${tenant.id}`);
     return quote;
   }
 }

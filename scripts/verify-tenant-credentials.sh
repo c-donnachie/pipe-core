@@ -30,13 +30,13 @@ echo ""
 # Consultar tenant
 psql "$DATABASE_URL" <<EOF
 SELECT 
-    tenant_id,
+    id,
     api_key,
     LEFT(api_secret, 30) || '...' as api_secret_preview,
     status,
     created_at
 FROM tenants
-WHERE tenant_id = '$TENANT_ID';
+WHERE id = '$TENANT_ID';
 EOF
 
 echo ""
@@ -53,7 +53,7 @@ if [ -n "$API_KEY" ] && [ -n "$API_SECRET" ]; then
         ELSE 'INVALID'
       END as validation
     FROM tenants
-    WHERE tenant_id = '$TENANT_ID';
+    WHERE id = '$TENANT_ID';
   " | xargs)
 
   if [ "$RESULT" = "VALID" ]; then
@@ -68,7 +68,7 @@ if [ -n "$API_KEY" ] && [ -n "$API_SECRET" ]; then
         CASE WHEN api_secret = '$API_SECRET' THEN '✅' ELSE '❌' END || ' API Secret',
         CASE WHEN status = 'active' THEN '✅' ELSE '❌' END || ' Status'
       FROM tenants
-      WHERE tenant_id = '$TENANT_ID';
+      WHERE id = '$TENANT_ID';
     "
   fi
 fi

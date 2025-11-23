@@ -26,7 +26,9 @@ async function bootstrap() {
     .setTitle('PipeCore API')
     .setDescription(
       'Integration Connector for Uber Direct, Rappi, Twilio, and more. ' +
-      'This API provides a unified interface for multiple delivery and communication services.',
+      'This API provides a unified interface for multiple delivery and communication services.\n\n' +
+      '**Nota:** Las descripciones detalladas de cada campo (tipo, formato, validaciones, ejemplos) ' +
+      'se muestran en la pestaña "Schema" de cada endpoint. Expande el Schema para ver la documentación completa.',
     )
     .setVersion('1.0')
     .addTag('uber', 'Uber Direct delivery integration endpoints')

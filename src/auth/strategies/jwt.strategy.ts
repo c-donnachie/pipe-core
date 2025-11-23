@@ -26,8 +26,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
     // Verificar que el tenant existe y está activo
-    const tenant = await this.databaseService.queryOne<{ tenant_id: string; status: string; api_secret: string }>(
-      'SELECT tenant_id, status, api_secret FROM tenants WHERE tenant_id = $1',
+    const tenant = await this.databaseService.queryOne<{ id: string; status: string; api_secret: string }>(
+      'SELECT id, status, api_secret FROM tenants WHERE id = $1',
       [tenantId]
     );
 

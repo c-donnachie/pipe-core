@@ -29,7 +29,7 @@ export class JwtDynamicGuard implements CanActivate {
     try {
       // Obtener el api_secret del tenant desde la base de datos
       const tenant = await this.databaseService.queryOne<{ api_secret: string; status: string }>(
-        'SELECT api_secret, status FROM tenants WHERE tenant_id = $1',
+        'SELECT api_secret, status FROM tenants WHERE id = $1',
         [tenantId]
       );
 

@@ -4,7 +4,7 @@
 
 ### Endpoint
 ```
-POST http://localhost:3000/pipecore/internal/register-tenant
+POST http://localhost:3000/internal/register-tenant
 ```
 
 ### Headers
@@ -16,7 +16,8 @@ Content-Type: application/json
 ### Body
 ```json
 {
-  "tenantId": "roe",
+  "name": "Mi Tenant",
+  "description": "Descripción del tenant",
   "apiKey": "pk_live_a8sd7f6",
   "apiSecret": "sk_live_9sd8f76f87df",
   "services": {
@@ -27,13 +28,16 @@ Content-Type: application/json
 }
 ```
 
+**Nota:** Los campos `name` y `description` son opcionales. El `name` debe obtenerse de la tabla `tenants.name` en Supabase.
+
 ### Comando cURL
 ```bash
-curl -X POST http://localhost:3000/pipecore/internal/register-tenant \
+curl -X POST http://localhost:3000/internal/register-tenant \
   -H "Authorization: Bearer $SERVICE_ROLE_SECRET" \
   -H "Content-Type: application/json" \
   -d '{
-    "tenantId": "roe",
+    "name": "Mi Tenant",
+    "description": "Descripción del tenant",
     "apiKey": "pk_live_a8sd7f6",
     "apiSecret": "sk_live_9sd8f76f87df",
     "services": {
@@ -48,9 +52,11 @@ curl -X POST http://localhost:3000/pipecore/internal/register-tenant \
 ```json
 {
   "success": true,
-  "tenantId": "roe"
+  "id": "c8b743f2-365b-4855-8ee1-9604d521c373"
 }
 ```
+
+**Nota:** El `id` es un UUID generado automáticamente por la base de datos.
 
 ### Respuesta de Error (401)
 ```json
@@ -64,9 +70,11 @@ curl -X POST http://localhost:3000/pipecore/internal/register-tenant \
 ```json
 {
   "statusCode": 409,
-  "message": "El tenant roe ya está registrado"
+  "message": "El tenant con esta API Key ya está registrado"
 }
 ```
+
+**Nota:** La verificación de duplicados se hace por `api_key`, no por `tenant_id`.
 
 ## Prueba 2: Validar JWT con Tenant
 
@@ -76,7 +84,7 @@ Necesitamos crear un endpoint de prueba que use `JwtDynamicGuard` para validar e
 ### Headers Requeridos
 ```
 Authorization: Bearer <JWT_firmado_con_api_secret>
-X-Tenant-Id: roe
+x-tenant-id: <uuid-del-tenant>
 ```
 
 ### Generar JWT de Prueba
@@ -85,8 +93,9 @@ X-Tenant-Id: roe
 const jwt = require('jsonwebtoken');
 
 const apiSecret = 'sk_live_9sd8f76f87df'; // Del tenant registrado
+const tenantId = 'c8b743f2-365b-4855-8ee1-9604d521c373'; // UUID retornado al registrar
 const token = jwt.sign(
-  { tenantId: 'roe' },
+  { tenantId },  // UUID del tenant
   apiSecret,
   { expiresIn: '1h' }
 );
@@ -99,7 +108,7 @@ console.log('JWT:', token);
 ### Query SQL
 ```sql
 SELECT 
-  tenant_id,
+  id,
   name,
   api_key,
   LEFT(api_secret, 10) || '...' as api_secret_preview,
@@ -107,8 +116,10 @@ SELECT
   services,
   created_at
 FROM tenants
-WHERE tenant_id = 'roe';
+WHERE id = 'c8b743f2-365b-4855-8ee1-9604d521c373';
 ```
+
+**Nota:** Ahora se usa `id` (UUID) en lugar de `tenant_id` para identificar tenants.
 
 ## Checklist de Pruebas
 
@@ -116,7 +127,7 @@ WHERE tenant_id = 'roe';
 - [ ] Variable `SERVICE_ROLE_SECRET` configurada
 - [ ] Variable `DATABASE_URL` configurada y conectando
 - [ ] Tabla `tenants` existe en la base de datos
-- [ ] Endpoint `/pipecore/internal/register-tenant` responde
+- [ ] Endpoint `/internal/register-tenant` responde
 - [ ] Guard `InternalApiGuard` protege el endpoint
 - [ ] Tenant se registra correctamente en BD
 - [ ] Log se crea en tabla `tenant_logs`

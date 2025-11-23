@@ -11,19 +11,19 @@ export class AuthService {
   /**
    * Registra un nuevo tenant desde Supabase
    */
-  async registerTenant(registerTenantDto: RegisterTenantDto): Promise<{ success: boolean; tenantId: string }> {
-    this.logger.log(`Registrando tenant: ${registerTenantDto.tenantId}`);
+  async registerTenant(registerTenantDto: RegisterTenantDto): Promise<{ success: boolean; id: string }> {
+    this.logger.log(`Registrando nuevo tenant con API Key: ${registerTenantDto.apiKey.substring(0, 10)}...`);
 
     try {
-      // Verificar si el tenant ya existe
-      const existingTenant = await this.databaseService.queryOne<{ tenant_id: string }>(
-        'SELECT tenant_id FROM tenants WHERE tenant_id = $1',
-        [registerTenantDto.tenantId]
+      // Verificar si el tenant ya existe (por api_key)
+      const existingTenant = await this.databaseService.queryOne<{ id: string }>(
+        'SELECT id FROM tenants WHERE api_key = $1',
+        [registerTenantDto.apiKey]
       );
 
       if (existingTenant) {
-        this.logger.warn(`Tenant ya existe: ${registerTenantDto.tenantId}`);
-        throw new ConflictException(`El tenant ${registerTenantDto.tenantId} ya está registrado`);
+        this.logger.warn(`Tenant ya existe con API Key: ${registerTenantDto.apiKey.substring(0, 10)}...`);
+        throw new ConflictException(`El tenant con esta API Key ya está registrado`);
       }
 
       // Crear el tenant en la base de datos
@@ -57,36 +57,38 @@ export class AuthService {
         },
       };
 
-      // Insertar tenant con el schema completo estándar
-      await this.databaseService.query(
-        `INSERT INTO tenants (tenant_id, name, api_key, api_secret, status, settings, services)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [
-          registerTenantDto.tenantId,
-          registerTenantDto.tenantId, // Usar tenantId como name por defecto
-          registerTenantDto.apiKey,
-          registerTenantDto.apiSecret,
-          'active',
-          JSON.stringify(defaultSettings),
-          JSON.stringify(registerTenantDto.services || {}),
-        ]
-      );
+      // Insertar tenant con el schema completo estándar (id se genera automáticamente como UUID)
+      const result = await this.databaseService.query<{ id: string }>(
+        `INSERT INTO tenants (name, description, api_key, api_secret, status, settings, services)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING id`,
+          [
+          registerTenantDto.name || null,
+          registerTenantDto.description || null,
+            registerTenantDto.apiKey,
+            registerTenantDto.apiSecret,
+            'active',
+            JSON.stringify(defaultSettings),
+            JSON.stringify(registerTenantDto.services || {}),
+          ]
+        );
 
-      this.logger.log(`Tenant registrado exitosamente: ${registerTenantDto.tenantId}`);
+      const tenantId = result[0].id;
+      this.logger.log(`Tenant registrado exitosamente con ID: ${tenantId}`);
 
       // Registrar log (opcional, no crítico si falla)
       try {
-        await this.databaseService.query(
-          `INSERT INTO tenant_logs (tenant_id, service, action, status, details)
-           VALUES ($1, $2, $3, $4, $5)`,
-          [
-            registerTenantDto.tenantId,
-            'auth',
-            'register_tenant',
-            'success',
-            JSON.stringify({ source: 'supabase' }),
-          ]
-        );
+      await this.databaseService.query(
+        `INSERT INTO tenant_logs (tenant_id, service, action, status, details)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [
+            tenantId,
+          'auth',
+          'register_tenant',
+          'success',
+          JSON.stringify({ source: 'supabase' }),
+        ]
+      );
       } catch (logError) {
         this.logger.warn(`No se pudo registrar el log: ${logError.message}`);
         // No lanzamos el error, el registro del tenant fue exitoso
@@ -94,10 +96,10 @@ export class AuthService {
 
       return {
         success: true,
-        tenantId: registerTenantDto.tenantId,
+        id: tenantId,
       };
     } catch (error) {
-      this.logger.error(`Error registrando tenant: ${registerTenantDto.tenantId}`, error);
+      this.logger.error(`Error registrando tenant`, error);
       this.logger.error(`Error details: ${error.message}`, error.stack);
 
       if (error instanceof ConflictException) {
@@ -115,7 +117,7 @@ export class AuthService {
    */
   async getTenantSecret(tenantId: string): Promise<string | null> {
     const tenant = await this.databaseService.queryOne<{ api_secret: string }>(
-      'SELECT api_secret FROM tenants WHERE tenant_id = $1 AND status = $2',
+      'SELECT api_secret FROM tenants WHERE id = $1 AND status = $2',
       [tenantId, 'active']
     );
 
@@ -126,8 +128,8 @@ export class AuthService {
    * Verifica si un tenant existe y está activo
    */
   async validateTenant(tenantId: string): Promise<boolean> {
-    const tenant = await this.databaseService.queryOne<{ tenant_id: string }>(
-      'SELECT tenant_id FROM tenants WHERE tenant_id = $1 AND status = $2',
+    const tenant = await this.databaseService.queryOne<{ id: string }>(
+      'SELECT id FROM tenants WHERE id = $1 AND status = $2',
       [tenantId, 'active']
     );
 

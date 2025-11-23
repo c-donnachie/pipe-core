@@ -11,10 +11,12 @@ El módulo de autenticación maneja:
 
 ## Cambios Recientes
 
-### Actualización del Esquema (v2.0)
+### Actualización del Esquema (v3.0)
 
+- **Eliminación de `tenant_id`**: La tabla `tenants` ahora usa únicamente `id` (UUID) como identificador único
+- **Generación automática de ID**: El `id` se genera automáticamente como UUID en la base de datos
+- **Campo `name` opcional**: El registro de tenant ahora acepta `name` y `description` como campos opcionales
 - **Simplificación del esquema**: El módulo ahora usa únicamente el campo `status` para validar el estado del tenant (eliminada compatibilidad con `is_active`)
-- **Esquema estándar**: La tabla `tenants` incluye el campo `description` y validación estricta de `status`
 - **Logs opcionales**: El registro en `tenant_logs` es opcional y no bloquea el registro del tenant
 - **Mejor manejo de errores**: Mensajes de error más descriptivos y logging mejorado
 
@@ -24,31 +26,33 @@ El módulo de autenticación maneja:
 
 ```
 1. Supabase crea tenant → Genera api_key y api_secret
-2. Supabase llama a POST /pipecore/internal/register-tenant
+2. Supabase llama a POST /internal/register-tenant
    Headers:
      - Authorization: Bearer <SERVICE_ROLE_SECRET>
    Body:
      {
-       "tenantId": "roe",
+       "name": "Mi Tenant",  // opcional
+       "description": "Descripción del tenant",  // opcional
        "apiKey": "pk_live_...",
        "apiSecret": "sk_live_...",
-       "services": {"delivery": true}
+       "services": {"delivery": true}  // opcional
      }
-3. PipeCore registra el tenant en su BD PostgreSQL
-4. Cuando Supabase llama a PipeCore para operaciones:
+3. PipeCore registra el tenant en su BD PostgreSQL y genera un UUID automáticamente
+4. PipeCore retorna: { "success": true, "id": "<uuid-generado>" }
+5. Cuando Supabase llama a PipeCore para operaciones:
    Headers:
      - Authorization: Bearer <JWT_firmado_con_api_secret>
-     - X-Tenant-Id: roe
+     - x-tenant-id: <uuid-del-tenant>
 5. PipeCore valida:
-   - Lee X-Tenant-Id del header
-   - Busca api_secret en BD
+   - Lee x-tenant-id del header (UUID)
+   - Busca api_secret en BD usando el UUID
    - Verifica JWT usando api_secret
    - Ejecuta la operación
 ```
 
 ## Endpoints
 
-### POST `/pipecore/internal/register-tenant`
+### POST `/internal/register-tenant`
 
 **Descripción:** Endpoint interno protegido para registrar tenants desde Supabase.
 
@@ -57,10 +61,11 @@ El módulo de autenticación maneja:
 **Request:**
 ```json
 {
-  "tenantId": "roe",
+  "name": "Mi Tenant",  // opcional
+  "description": "Descripción del tenant",  // opcional
   "apiKey": "pk_live_a8sd7f6",
   "apiSecret": "sk_live_9sd8f76f87df",
-  "services": {
+  "services": {  // opcional
     "delivery": true,
     "messaging": true,
     "payments": false
@@ -72,9 +77,15 @@ El módulo de autenticación maneja:
 ```json
 {
   "success": true,
-  "tenantId": "roe"
+  "id": "c8b743f2-365b-4855-8ee1-9604d521c373"
 }
 ```
+
+**Notas:**
+- El `id` se genera automáticamente como UUID en la base de datos
+- El `name` se obtiene de la tabla `tenants.name` en Supabase (si está disponible)
+- Si no se proporciona `name`, se guarda como `null`
+- La verificación de duplicados se hace por `api_key`, no por `tenant_id`
 
 **Errores:**
 - `401`: Token inválido o faltante
@@ -106,13 +117,13 @@ export class DeliveryController {
 
 **Headers requeridos:**
 - `Authorization: Bearer <JWT>`
-- `X-Tenant-Id: <tenant_id>`
+- `x-tenant-id: <uuid-del-tenant>`
 
 **Validación:**
-- Verifica que el tenant existe en la base de datos
+- Verifica que el tenant existe en la base de datos usando el UUID
 - Verifica que el tenant tiene `status = 'active'`
 - Valida el JWT usando el `api_secret` del tenant
-- Compara el `tenantId` del JWT con el header `X-Tenant-Id`
+- Compara el `tenantId` del JWT con el header `x-tenant-id`
 
 ### `InternalApiGuard`
 
@@ -167,8 +178,7 @@ El esquema estándar de la tabla `tenants` es:
 ```sql
 CREATE TABLE tenants (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    tenant_id VARCHAR(255) UNIQUE NOT NULL,
-    name VARCHAR(255) NOT NULL,
+    name VARCHAR(255),
     description TEXT,
     api_key VARCHAR(255) NOT NULL,
     api_secret VARCHAR(255) NOT NULL,
@@ -180,7 +190,6 @@ CREATE TABLE tenants (
 );
 
 -- Índices
-CREATE INDEX idx_tenants_tenant_id ON tenants(tenant_id);
 CREATE INDEX idx_tenants_api_key ON tenants(api_key);
 CREATE INDEX idx_tenants_status ON tenants(status);
 
@@ -192,15 +201,17 @@ EXECUTE FUNCTION update_updated_at_column();
 ```
 
 **Notas importantes:**
+- El campo `id` se genera automáticamente como UUID (no se envía en el request)
 - El campo `status` solo acepta valores: `'active'`, `'inactive'`, `'suspended'`
-- El campo `description` es opcional
-- El campo `name` se establece automáticamente con el valor de `tenant_id` si no se proporciona
+- Los campos `name` y `description` son opcionales
+- El campo `name` debe obtenerse de la tabla `tenants.name` en Supabase
 - Los campos `settings` y `services` son JSONB y se inicializan con objetos vacíos por defecto
 - El trigger actualiza automáticamente `updated_at` en cada actualización
+- La verificación de duplicados se hace por `api_key`, no por `tenant_id`
 
-Para recrear la tabla con el esquema correcto, ejecuta:
+Para eliminar la columna `tenant_id` (si existe), ejecuta:
 ```bash
-psql $DATABASE_URL -f db/pipecore/recreate-tenants.sql
+psql $DATABASE_URL -f db/pipecore/remove-tenant-id-column.sql
 ```
 
 ## Ejemplo de Uso Completo
@@ -209,19 +220,28 @@ psql $DATABASE_URL -f db/pipecore/recreate-tenants.sql
 
 ```typescript
 // En Supabase Edge Function
-const response = await fetch('https://pipecore.railway.app/pipecore/internal/register-tenant', {
+// Primero obtener el tenant desde Supabase para obtener el name
+const { data: tenant } = await supabase
+  .from('tenants')
+  .select('id, name, api_key, api_secret, services')
+  .eq('id', tenantId)
+  .single();
+
+const response = await fetch('https://pipecore.railway.app/internal/register-tenant', {
   method: 'POST',
   headers: {
     'Authorization': `Bearer ${process.env.PIPECORE_SERVICE_ROLE_SECRET}`,
     'Content-Type': 'application/json',
   },
   body: JSON.stringify({
-    tenantId: 'roe',
-    apiKey: 'pk_live_a8sd7f6',
-    apiSecret: 'sk_live_9sd8f76f87df',
-    services: { delivery: true },
+    name: tenant.name,  // ✅ Enviar name desde la tabla tenants
+    apiKey: tenant.api_key,
+    apiSecret: tenant.api_secret,
+    services: tenant.services || { delivery: true },
   }),
 });
+
+const { id } = await response.json(); // UUID generado por PipeCore
 ```
 
 ### 2. Supabase genera JWT y llama a PipeCore
@@ -231,8 +251,9 @@ const response = await fetch('https://pipecore.railway.app/pipecore/internal/reg
 import * as jwt from 'jsonwebtoken';
 
 const apiSecret = 'sk_live_9sd8f76f87df'; // Del tenant en Supabase
+const tenantId = 'c8b743f2-365b-4855-8ee1-9604d521c373'; // UUID retornado por PipeCore
 const token = jwt.sign(
-  { tenantId: 'roe' },
+  { tenantId },
   apiSecret,
   { expiresIn: '1h' }
 );
@@ -241,7 +262,7 @@ const response = await fetch('https://pipecore.railway.app/uber/create-delivery'
   method: 'POST',
   headers: {
     'Authorization': `Bearer ${token}`,
-    'X-Tenant-Id': 'roe',
+    'x-tenant-id': tenantId,  // UUID del tenant
     'Content-Type': 'application/json',
   },
   body: JSON.stringify({
@@ -259,7 +280,7 @@ export class UberController {
   @Post('create-delivery')
   @UseGuards(JwtDynamicGuard)
   async createDelivery(@Request() req, @Body() dto: CreateDeliveryDto) {
-    const tenantId = req.user.tenantId; // Validado por JwtDynamicGuard
+    const tenantId = req.user.tenantId; // UUID validado por JwtDynamicGuard
     // Procesar delivery...
   }
 }
@@ -290,11 +311,12 @@ node scripts/register-test-tenant.js test-demo
 ```bash
 export SERVICE_ROLE_SECRET="tu_secreto_aqui"
 
-curl -X POST http://localhost:3000/pipecore/internal/register-tenant \
+curl -X POST http://localhost:3000/internal/register-tenant \
   -H "Authorization: Bearer $SERVICE_ROLE_SECRET" \
   -H "Content-Type: application/json" \
   -d '{
-    "tenantId": "test-demo",
+    "name": "Test Demo Tenant",
+    "description": "Tenant de prueba",
     "apiKey": "pk_test_123",
     "apiSecret": "sk_test_456",
     "services": {
@@ -342,7 +364,7 @@ Endpoint protegido para probar la autenticación JWT.
 
 **Headers requeridos:**
 - `Authorization: Bearer <JWT>`
-- `X-Tenant-Id: <tenant_id>`
+- `x-tenant-id: <uuid-del-tenant>`
 
 ### `GET /auth-test/validate-tenant/:tenantId`
 
