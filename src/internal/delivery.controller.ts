@@ -25,26 +25,13 @@ export class DeliveryController {
   @HttpCode(HttpStatus.OK)
   @ApiHeader({ 
     name: 'x-tenant-key', 
-    description: `API Key pública del tenant.
-    
-**Tipo:** String
-**Formato:** Prefijo recomendado \`pk_live_\` o \`pk_test_\` seguido de caracteres alfanuméricos
-**Ejemplo:** "example_key"
-**Uso:** Se usa junto con \`x-tenant-secret\` para identificar y validar al tenant
-**Validación:** Debe existir un tenant activo con esta API Key en la base de datos`,
+    description: 'API Key pública del tenant',
     required: true,
     example: 'example_key'
   })
   @ApiHeader({ 
     name: 'x-tenant-secret', 
-    description: `API Secret del tenant (usado para validar credenciales).
-    
-**Tipo:** String
-**Formato:** Prefijo recomendado \`sk_live_\` o \`sk_test_\` seguido de caracteres alfanuméricos
-**Ejemplo:** "demo_123"
-**Seguridad:** ⚠️ **NUNCA** debe exponerse al frontend o en logs públicos
-**Uso:** Se usa junto con \`x-tenant-key\` para validar las credenciales del tenant
-**Validación:** Debe coincidir con el \`api_secret\` del tenant en la base de datos`,
+    description: 'API Secret del tenant (usado para validar credenciales)',
     required: true,
     example: 'demo_123'
   })
