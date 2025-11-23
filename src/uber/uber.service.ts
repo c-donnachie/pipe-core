@@ -405,11 +405,23 @@ export class UberService {
   private generateDatesIfNeeded(data: DeliveryQuoteRequest | CreateDeliveryRequest): DeliveryQuoteRequest | CreateDeliveryRequest {
     const now = new Date();
     
+    // Helper function to parse and validate dates
+    const parseDate = (dateString: string | undefined): Date | null => {
+      if (!dateString) return null;
+      const date = new Date(dateString);
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        this.logger.warn(`Invalid date string provided: ${dateString}. Will generate a new date.`);
+        return null;
+      }
+      return date;
+    };
+    
     // Parse provided dates or generate new ones
-    let pickupReady = data.pickup_ready_dt ? new Date(data.pickup_ready_dt) : null;
-    let pickupDeadline = data.pickup_deadline_dt ? new Date(data.pickup_deadline_dt) : null;
-    let dropoffReady = data.dropoff_ready_dt ? new Date(data.dropoff_ready_dt) : null;
-    let dropoffDeadline = data.dropoff_deadline_dt ? new Date(data.dropoff_deadline_dt) : null;
+    let pickupReady = parseDate(data.pickup_ready_dt);
+    let pickupDeadline = parseDate(data.pickup_deadline_dt);
+    let dropoffReady = parseDate(data.dropoff_ready_dt);
+    let dropoffDeadline = parseDate(data.dropoff_deadline_dt);
     
     // Generate missing dates
     if (!pickupReady) {
