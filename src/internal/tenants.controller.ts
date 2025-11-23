@@ -6,7 +6,7 @@ import { InternalApiGuard } from './guards/internal-api.guard';
 import { DatabaseService } from '../database/database.service';
 
 @ApiTags('Internal API - Tenants')
-@Controller('pipecore/internal/tenants')
+@Controller('internal/tenants')
 @UseGuards(InternalApiGuard)
 @ApiBearerAuth('service-role-secret')
 export class InternalTenantsController {

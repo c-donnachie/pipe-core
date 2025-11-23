@@ -48,7 +48,7 @@ async function bootstrap() {
         type: 'http',
         scheme: 'bearer',
         name: 'Authorization',
-        description: 'Enter SERVICE_ROLE_SECRET for internal API endpoints. Required for /pipecore/internal/* endpoints.',
+        description: 'Enter SERVICE_ROLE_SECRET for internal API endpoints. Required for /internal/* endpoints.',
         in: 'header',
       },
       'service-role-secret',
